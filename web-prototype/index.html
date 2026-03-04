@@ -1154,6 +1154,105 @@
             font-size: 1.6rem;
         }
 
+        /* No-animations mode */
+        body.no-animations,
+        body.no-animations *,
+        body.no-animations *::before,
+        body.no-animations *::after {
+            animation: none !important;
+            transition: none !important;
+        }
+
+        /* Color swatches row */
+        .color-swatches {
+            display: flex;
+            gap: 8px;
+            margin-top: 6px;
+        }
+
+        .color-swatch {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: transform 0.15s, border-color 0.15s;
+        }
+
+        .color-swatch:hover {
+            transform: scale(1.2);
+            border-color: var(--text-primary);
+        }
+
+        /* Config section divider */
+        .config-divider {
+            height: 1px;
+            background: var(--border);
+            margin: 16px 0;
+        }
+
+        /* Export/Import buttons */
+        .config-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .btn-config-action {
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            padding: 10px 20px;
+            font-size: 0.85rem;
+            border-radius: var(--r-md);
+            cursor: pointer;
+            transition: all var(--t);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-config-action:hover {
+            color: var(--text-primary);
+            border-color: var(--accent);
+            background: var(--accent-subtle);
+        }
+
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--accent-bright);
+            padding: 14px 22px;
+            border-radius: var(--r-md);
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            z-index: 10000;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.3s, transform 0.3s;
+            pointer-events: none;
+        }
+
+        .toast.visible {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
+        .toast.toast-success {
+            border-left-color: var(--success);
+        }
+
+        .toast.toast-warning {
+            border-left-color: #f59e0b;
+        }
+
         /* Reset button */
         .btn-reset {
             background: transparent;
@@ -1421,12 +1520,65 @@
                             <div class="pref-row">
                                 <div class="pref-info">
                                     <h4>Color de Acento</h4>
-                                    <p>Personaliza el color primario de botones y acentos.</p>
+                                    <p>Color primario de botones, enlaces y acentos.</p>
+                                    <div class="color-swatches">
+                                        <span class="color-swatch" style="background:#0e756b" data-color="#0e756b"
+                                            data-target="accent" title="Teal"></span>
+                                        <span class="color-swatch" style="background:#6366f1" data-color="#6366f1"
+                                            data-target="accent" title="Indigo"></span>
+                                        <span class="color-swatch" style="background:#ec4899" data-color="#ec4899"
+                                            data-target="accent" title="Rosa"></span>
+                                        <span class="color-swatch" style="background:#f59e0b" data-color="#f59e0b"
+                                            data-target="accent" title="Ámbar"></span>
+                                        <span class="color-swatch" style="background:#ef4444" data-color="#ef4444"
+                                            data-target="accent" title="Rojo"></span>
+                                        <span class="color-swatch" style="background:#8b5cf6" data-color="#8b5cf6"
+                                            data-target="accent" title="Violeta"></span>
+                                    </div>
                                 </div>
                                 <input type="color" id="color-picker" value="#0e756b"
                                     style="cursor:pointer; width: 46px; height: 28px; border: none; background: transparent; border-radius: 4px;">
                             </div>
                         </div>
+
+                        <div class="config-divider"></div>
+                        <p class="config-section-title">Texto e Iconos</p>
+
+                        <div class="config-group">
+                            <div class="pref-row">
+                                <div class="pref-info">
+                                    <h4>Color del Texto Principal</h4>
+                                    <p>Cambia el color de los títulos y texto principal.</p>
+                                </div>
+                                <input type="color" id="text-color-picker" value="#dde7f3"
+                                    style="cursor:pointer; width: 46px; height: 28px; border: none; background: transparent; border-radius: 4px;">
+                            </div>
+                        </div>
+
+                        <div class="config-group">
+                            <div class="pref-row">
+                                <div class="pref-info">
+                                    <h4>Color del Texto Secundario</h4>
+                                    <p>Color de descripciones, subtítulos y texto de soporte.</p>
+                                </div>
+                                <input type="color" id="text-secondary-color-picker" value="#8fa8c8"
+                                    style="cursor:pointer; width: 46px; height: 28px; border: none; background: transparent; border-radius: 4px;">
+                            </div>
+                        </div>
+
+                        <div class="config-group">
+                            <div class="pref-row">
+                                <div class="pref-info">
+                                    <h4>Color de Iconos</h4>
+                                    <p>Personaliza el color de los iconos del sidebar y la interfaz.</p>
+                                </div>
+                                <input type="color" id="icon-color-picker" value="#8fa8c8"
+                                    style="cursor:pointer; width: 46px; height: 28px; border: none; background: transparent; border-radius: 4px;">
+                            </div>
+                        </div>
+
+                        <div class="config-divider"></div>
+                        <p class="config-section-title">Tipografía y Forma</p>
 
                         <div class="config-group">
                             <div class="pref-row">
@@ -1435,9 +1587,33 @@
                                     <p>Ajusta el tamaño base de texto en la interfaz.</p>
                                 </div>
                                 <div class="range-control">
-                                    <input type="range" id="font-size-slider" min="12" max="18" value="14" step="1">
+                                    <input type="range" id="font-size-slider" min="12" max="20" value="14" step="1">
                                     <span class="range-value" id="font-size-value">14px</span>
                                 </div>
+                            </div>
+                        </div>
+
+                        <div class="config-group">
+                            <div class="pref-row">
+                                <div class="pref-info">
+                                    <h4>Radio de Bordes</h4>
+                                    <p>Ajusta qué tan redondeadas son las tarjetas y botones.</p>
+                                </div>
+                                <div class="range-control">
+                                    <input type="range" id="border-radius-slider" min="0" max="24" value="12" step="2">
+                                    <span class="range-value" id="border-radius-value">12px</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="config-group">
+                            <div class="pref-row">
+                                <div class="pref-info">
+                                    <h4>Color del Sidebar</h4>
+                                    <p>Personaliza el color de fondo de la barra lateral.</p>
+                                </div>
+                                <input type="color" id="sidebar-color-picker" value="#080f1c"
+                                    style="cursor:pointer; width: 46px; height: 28px; border: none; background: transparent; border-radius: 4px;">
                             </div>
                         </div>
                     </div>
@@ -1464,7 +1640,7 @@
                             <div class="pref-row">
                                 <div class="pref-info">
                                     <h4>Animaciones</h4>
-                                    <p>Habilita o deshabilita las animaciones de la interfaz.</p>
+                                    <p>Habilita o deshabilita todas las animaciones y transiciones.</p>
                                 </div>
                                 <label class="toggle-switch">
                                     <input type="checkbox" id="animations-toggle" checked>
@@ -1488,12 +1664,25 @@
                         </div>
                     </div>
 
-                    <!-- Reset Card -->
-                    <div class="card col-full" style="text-align: center; padding: 24px;">
-                        <button class="btn-reset" id="btn-reset-settings" style="margin: 0 auto;">
-                            <i data-lucide="rotate-ccw" style="width:16px; height:16px;"></i>
-                            Restaurar Valores por Defecto
-                        </button>
+                    <!-- Actions Card -->
+                    <div class="card col-full" style="padding: 24px;">
+                        <h2 class="card-title" style="margin-bottom: 12px; text-align:center;">Acciones de Configuración
+                        </h2>
+                        <div class="config-actions">
+                            <button class="btn-config-action" id="btn-export-settings">
+                                <i data-lucide="download" style="width:16px; height:16px;"></i>
+                                Exportar Config
+                            </button>
+                            <button class="btn-config-action" id="btn-import-settings">
+                                <i data-lucide="upload" style="width:16px; height:16px;"></i>
+                                Importar Config
+                            </button>
+                            <button class="btn-reset" id="btn-reset-settings">
+                                <i data-lucide="rotate-ccw" style="width:16px; height:16px;"></i>
+                                Restaurar Valores por Defecto
+                            </button>
+                        </div>
+                        <input type="file" id="import-settings-file" accept=".json" hidden>
                     </div>
                 </div>
             </div>
@@ -1569,7 +1758,12 @@
         const DEFAULT_SETTINGS = {
             lightTheme: false,
             accentColor: '#0e756b',
+            textColor: '#dde7f3',
+            textSecondaryColor: '#8fa8c8',
+            iconColor: '#8fa8c8',
+            sidebarColor: '#080f1c',
             fontSize: 14,
+            borderRadius: 12,
             compactMode: false,
             animations: true,
             defaultMonth: 'current'
@@ -1584,6 +1778,25 @@
 
         function saveSettings(settings) {
             localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+        }
+
+        function showToast(message, type = 'success') {
+            let toast = document.getElementById('app-toast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'app-toast';
+                toast.className = 'toast';
+                document.body.appendChild(toast);
+            }
+            toast.textContent = message;
+            toast.className = 'toast toast-' + type;
+            requestAnimationFrame(() => {
+                toast.classList.add('visible');
+            });
+            clearTimeout(toast._timeout);
+            toast._timeout = setTimeout(() => {
+                toast.classList.remove('visible');
+            }, 2500);
         }
 
         function applyAccentColor(hex) {
@@ -1606,10 +1819,37 @@
             applyAccentColor(s.accentColor);
             document.getElementById('color-picker').value = s.accentColor;
 
+            // Text colors
+            document.documentElement.style.setProperty('--text-primary', s.textColor);
+            document.getElementById('text-color-picker').value = s.textColor;
+
+            document.documentElement.style.setProperty('--text-secondary', s.textSecondaryColor);
+            document.getElementById('text-secondary-color-picker').value = s.textSecondaryColor;
+
+            // Icon color
+            document.documentElement.style.setProperty('--icon-color', s.iconColor);
+            document.getElementById('icon-color-picker').value = s.iconColor;
+            // Apply icon color to all SVG strokes in sidebar
+            document.querySelectorAll('.sidebar svg, .nav-item svg').forEach(svg => {
+                svg.style.stroke = s.iconColor;
+            });
+
+            // Sidebar color
+            document.documentElement.style.setProperty('--bg-sidebar', s.sidebarColor);
+            document.getElementById('sidebar-color-picker').value = s.sidebarColor;
+
             // Font size
             document.documentElement.style.fontSize = s.fontSize + 'px';
             document.getElementById('font-size-slider').value = s.fontSize;
             document.getElementById('font-size-value').textContent = s.fontSize + 'px';
+
+            // Border radius
+            document.documentElement.style.setProperty('--r-sm', Math.max(s.borderRadius - 4, 0) + 'px');
+            document.documentElement.style.setProperty('--r-md', s.borderRadius + 'px');
+            document.documentElement.style.setProperty('--r-lg', (s.borderRadius + 6) + 'px');
+            document.documentElement.style.setProperty('--r-xl', (s.borderRadius + 12) + 'px');
+            document.getElementById('border-radius-slider').value = s.borderRadius;
+            document.getElementById('border-radius-value').textContent = s.borderRadius + 'px';
 
             // Compact mode
             if (s.compactMode) document.body.classList.add('compact-mode');
@@ -1617,8 +1857,13 @@
             document.getElementById('compact-toggle').checked = s.compactMode;
 
             // Animations
-            if (!s.animations) document.body.style.setProperty('--t', '0s');
-            else document.body.style.setProperty('--t', '0.25s cubic-bezier(.4, 0, .2, 1)');
+            if (!s.animations) {
+                document.body.classList.add('no-animations');
+                document.body.style.setProperty('--t', '0s');
+            } else {
+                document.body.classList.remove('no-animations');
+                document.body.style.setProperty('--t', '0.25s cubic-bezier(.4, 0, .2, 1)');
+            }
             document.getElementById('animations-toggle').checked = s.animations;
 
             // Default month
@@ -1647,6 +1892,18 @@
         const themeToggle = document.getElementById('theme-toggle');
         themeToggle.addEventListener('change', (e) => {
             currentSettings.lightTheme = e.target.checked;
+            // When switching themes, reset text/icon colors to theme defaults
+            if (e.target.checked) {
+                currentSettings.textColor = '#0f172a';
+                currentSettings.textSecondaryColor = '#475569';
+                currentSettings.iconColor = '#475569';
+                currentSettings.sidebarColor = '#ffffff';
+            } else {
+                currentSettings.textColor = DEFAULT_SETTINGS.textColor;
+                currentSettings.textSecondaryColor = DEFAULT_SETTINGS.textSecondaryColor;
+                currentSettings.iconColor = DEFAULT_SETTINGS.iconColor;
+                currentSettings.sidebarColor = DEFAULT_SETTINGS.sidebarColor;
+            }
             applyAllSettings(currentSettings);
             saveSettings(currentSettings);
         });
@@ -1659,12 +1916,65 @@
             saveSettings(currentSettings);
         });
 
+        // Accent color swatches
+        document.querySelectorAll('.color-swatch[data-target="accent"]').forEach(swatch => {
+            swatch.addEventListener('click', () => {
+                currentSettings.accentColor = swatch.dataset.color;
+                applyAccentColor(currentSettings.accentColor);
+                document.getElementById('color-picker').value = currentSettings.accentColor;
+                saveSettings(currentSettings);
+            });
+        });
+
+        // Text color
+        document.getElementById('text-color-picker').addEventListener('input', (e) => {
+            currentSettings.textColor = e.target.value;
+            document.documentElement.style.setProperty('--text-primary', e.target.value);
+            saveSettings(currentSettings);
+        });
+
+        // Text secondary color
+        document.getElementById('text-secondary-color-picker').addEventListener('input', (e) => {
+            currentSettings.textSecondaryColor = e.target.value;
+            document.documentElement.style.setProperty('--text-secondary', e.target.value);
+            saveSettings(currentSettings);
+        });
+
+        // Icon color
+        document.getElementById('icon-color-picker').addEventListener('input', (e) => {
+            currentSettings.iconColor = e.target.value;
+            document.documentElement.style.setProperty('--icon-color', e.target.value);
+            document.querySelectorAll('.sidebar svg, .nav-item svg').forEach(svg => {
+                svg.style.stroke = e.target.value;
+            });
+            saveSettings(currentSettings);
+        });
+
+        // Sidebar color
+        document.getElementById('sidebar-color-picker').addEventListener('input', (e) => {
+            currentSettings.sidebarColor = e.target.value;
+            document.documentElement.style.setProperty('--bg-sidebar', e.target.value);
+            saveSettings(currentSettings);
+        });
+
         // Font size slider
         const fontSlider = document.getElementById('font-size-slider');
         fontSlider.addEventListener('input', (e) => {
             currentSettings.fontSize = parseInt(e.target.value);
             document.documentElement.style.fontSize = currentSettings.fontSize + 'px';
             document.getElementById('font-size-value').textContent = currentSettings.fontSize + 'px';
+            saveSettings(currentSettings);
+        });
+
+        // Border radius slider
+        document.getElementById('border-radius-slider').addEventListener('input', (e) => {
+            const val = parseInt(e.target.value);
+            currentSettings.borderRadius = val;
+            document.documentElement.style.setProperty('--r-sm', Math.max(val - 4, 0) + 'px');
+            document.documentElement.style.setProperty('--r-md', val + 'px');
+            document.documentElement.style.setProperty('--r-lg', (val + 6) + 'px');
+            document.documentElement.style.setProperty('--r-xl', (val + 12) + 'px');
+            document.getElementById('border-radius-value').textContent = val + 'px';
             saveSettings(currentSettings);
         });
 
@@ -1680,6 +1990,7 @@
             currentSettings.animations = e.target.checked;
             applyAllSettings(currentSettings);
             saveSettings(currentSettings);
+            showToast(e.target.checked ? '✨ Animaciones activadas' : '⚡ Animaciones desactivadas');
         });
 
         // Default month
@@ -1695,6 +2006,44 @@
             applyAllSettings(currentSettings);
             saveSettings(currentSettings);
             document.documentElement.style.fontSize = '';
+            showToast('🔄 Configuración restaurada a valores por defecto', 'success');
+        });
+
+        // Export settings
+        document.getElementById('btn-export-settings').addEventListener('click', () => {
+            const dataStr = JSON.stringify(currentSettings, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'manatech_ui_config.json';
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('📦 Configuración exportada exitosamente', 'success');
+        });
+
+        // Import settings
+        document.getElementById('btn-import-settings').addEventListener('click', () => {
+            document.getElementById('import-settings-file').click();
+        });
+
+        document.getElementById('import-settings-file').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                try {
+                    const imported = JSON.parse(evt.target.result);
+                    currentSettings = { ...DEFAULT_SETTINGS, ...imported };
+                    applyAllSettings(currentSettings);
+                    saveSettings(currentSettings);
+                    showToast('✅ Configuración importada correctamente', 'success');
+                } catch {
+                    showToast('❌ Error: Archivo de configuración inválido', 'warning');
+                }
+            };
+            reader.readAsText(file);
+            e.target.value = '';
         });
 
         // --- File upload Logic ---
