@@ -1,0 +1,58 @@
+# ============================================================
+# Automated Reporting System – Configuration
+# ============================================================
+
+project:
+  name: "Sistema de Reportes de Mantenimiento – Centros Educativos"
+  version: "1.0.0"
+  author: "Equipo de Mantenimiento de Red"
+
+paths:
+  data_dir: "data"
+  templates_dir: "templates"
+  assets_dir: "assets"
+  reports_dir: "reports"
+
+  # Excel source files (relative to project root)
+  visits_file: "data/visitas_centros.xlsx"
+  equipment_file: "data/cambios_equipos.xlsx"
+
+  # Word template
+  template_file: "templates/reporte_template.docx"
+
+  # Company logo
+  logo_file: "assets/logo_manatech.png"
+
+report:
+  # Default month/year used when none is passed via CLI (YYYY-MM)
+  default_period: "2026-02"
+
+  # Thresholds used in analyses
+  thresholds:
+    dhcp_saturation_pct: 80        # Alert if DHCP saturation >= this value
+    bandwidth_high_pct: 70         # Flag as high consumer if bandwidth >= this
+    uptime_low_pct: 95             # Flag as low-uptime if uptime < this
+
+  # Word document styles
+  styles:
+    heading1: "Heading 1"
+    heading2: "Heading 2"
+    heading3: "Heading 3"
+    table_style: "Table Grid"
+    normal: "Normal"
+
+  # Logo dimensions in the document (cm)
+  logo:
+    width_cm: 5.0
+
+  # Page margins (cm)
+  margins:
+    top_cm: 2.54
+    bottom_cm: 2.54
+    left_cm: 3.0
+    right_cm: 3.0
+
+company:
+  name: "Manatech"
+  department: "Dirección de Mantenimiento de Conectividad"
+  contact: "mantenimiento@manatech.com"

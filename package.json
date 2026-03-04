@@ -1,0 +1,22 @@
+{
+  "name": "reporting-system",
+  "version": "1.0.0",
+  "description": "Generador automático de reportes mensuales en Word para el Proyecto de Mantenimiento a la Conectividad de los Centros Educativos.",
+  "main": "main.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-packager . ManatechReports --platform=win32 --arch=x64 --out=dist-standalone --icon=assets/logo_manatech.png --overwrite"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "electron": "^40.6.1",
+    "electron-builder": "^26.8.1",
+    "electron-packager": "^17.1.2"
+  }
+}
