@@ -1320,6 +1320,183 @@
             }
         }
 
+        /* === DASHBOARD STYLES === */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--r-lg);
+            padding: 24px;
+            text-align: center;
+            transition: transform var(--t), box-shadow var(--t);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .stat-value {
+            font-size: 2.2rem;
+            font-weight: 700;
+            font-family: 'Outfit', sans-serif;
+            color: var(--accent-bright);
+        }
+
+        .stat-label {
+            font-size: 0.82rem;
+            color: var(--text-dim);
+            margin-top: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        .stat-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--accent-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 12px;
+            color: var(--accent-bright);
+        }
+
+        .activity-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .activity-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .activity-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent-bright);
+            flex-shrink: 0;
+        }
+
+        .activity-text {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+        }
+
+        .activity-time {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            margin-left: auto;
+            white-space: nowrap;
+        }
+
+        /* Predefined theme cards */
+        .theme-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+        }
+
+        .theme-card {
+            border: 2px solid var(--border);
+            border-radius: var(--r-md);
+            padding: 16px;
+            cursor: pointer;
+            transition: all var(--t);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .theme-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+        }
+
+        .theme-card.active-theme {
+            border-color: var(--accent-bright);
+            box-shadow: 0 0 16px var(--accent-glow);
+        }
+
+        .theme-preview {
+            height: 40px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            display: flex;
+            overflow: hidden;
+        }
+
+        .theme-preview span {
+            flex: 1;
+        }
+
+        .theme-card-name {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .theme-card-desc {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            margin-top: 2px;
+        }
+
+        /* Preview panel */
+        .preview-frame {
+            width: 100%;
+            min-height: 500px;
+            border: 1px solid var(--border);
+            border-radius: var(--r-md);
+            background: #fff;
+            overflow: hidden;
+        }
+
+        .preview-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 400px;
+            color: var(--text-dim);
+            gap: 16px;
+        }
+
+        .preview-placeholder svg {
+            width: 64px;
+            height: 64px;
+            opacity: 0.3;
+        }
+
+        /* Notification badge */
+        .notif-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: var(--success-bg);
+            color: var(--success);
+            font-size: 0.72rem;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: 600;
+        }
+
         @media (max-width: 1100px) {
             .grid {
                 grid-template-columns: 1fr;
@@ -1327,6 +1504,10 @@
 
             .main {
                 padding: 32px 28px;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
             }
         }
     </style>
@@ -1371,7 +1552,13 @@
             <nav class="sidebar-nav">
                 <span class="nav-section-label">Principal</span>
                 <a href="#" class="nav-item active" onclick="switchTab('view-gen', this)">
-                    <i data-lucide="layout-dashboard"></i><span>Generador</span>
+                    <i data-lucide="file-down"></i><span>Generador</span>
+                </a>
+                <a href="#" class="nav-item" onclick="switchTab('view-dashboard', this)">
+                    <i data-lucide="bar-chart-3"></i><span>Dashboard</span>
+                </a>
+                <a href="#" class="nav-item" onclick="switchTab('view-preview', this)">
+                    <i data-lucide="eye"></i><span>Preview</span>
                 </a>
                 <span class="nav-section-label">Sistema</span>
                 <a href="#" class="nav-item" onclick="switchTab('view-settings', this)">
@@ -1486,6 +1673,81 @@
                         </div>
                     </div>
                 </div><!-- .grid -->
+            </div>
+
+            <!-- === VIEW: DASHBOARD === -->
+            <div id="view-dashboard" class="view-section">
+                <div class="top-header">
+                    <div class="header-text">
+                        <h1>Dashboard</h1>
+                        <p>Resumen de actividad y estadísticas del sistema.</p>
+                    </div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon"><i data-lucide="file-text" style="width:20px;height:20px;"></i></div>
+                        <div class="stat-value" id="dash-total-reports">0</div>
+                        <div class="stat-label">Reportes Generados</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i data-lucide="calendar-check" style="width:20px;height:20px;"></i>
+                        </div>
+                        <div class="stat-value" id="dash-current-month">—</div>
+                        <div class="stat-label">Mes Actual</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i data-lucide="clock" style="width:20px;height:20px;"></i></div>
+                        <div class="stat-value" id="dash-last-gen">—</div>
+                        <div class="stat-label">Última Generación</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i data-lucide="hard-drive" style="width:20px;height:20px;"></i></div>
+                        <div class="stat-value" id="dash-data-status">OK</div>
+                        <div class="stat-label">Estado del Sistema</div>
+                    </div>
+                </div>
+
+                <div class="grid">
+                    <div class="card col-full">
+                        <h2 class="card-title" style="margin-bottom:16px;">Actividad Reciente</h2>
+                        <ul class="activity-list" id="activity-list">
+                            <li class="activity-item">
+                                <span class="activity-dot"></span>
+                                <span class="activity-text">Sistema inicializado correctamente</span>
+                                <span class="activity-time">Ahora</span>
+                            </li>
+                            <li class="activity-item">
+                                <span class="activity-dot" style="background:var(--success)"></span>
+                                <span class="activity-text">Motor de generación Flask conectado</span>
+                                <span class="activity-time">Al inicio</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- === VIEW: PREVIEW === -->
+            <div id="view-preview" class="view-section">
+                <div class="top-header">
+                    <div class="header-text">
+                        <h1>Vista Previa del Reporte</h1>
+                        <p>Previsualiza el último documento generado antes de descargarlo.</p>
+                    </div>
+                </div>
+
+                <div class="grid">
+                    <div class="card col-full">
+                        <div id="preview-content">
+                            <div class="preview-placeholder">
+                                <i data-lucide="file-search" style="width:64px;height:64px;opacity:0.3;"></i>
+                                <h3 style="color:var(--text-dim);font-weight:400;">No hay reporte disponible</h3>
+                                <p style="color:var(--text-dim);font-size:0.85rem;">Genera un reporte primero desde el
+                                    tab <strong>Generador</strong> para ver la vista previa aquí.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- === VIEW: SETTINGS === -->
@@ -1618,6 +1880,80 @@
                         </div>
                     </div>
 
+                    <!-- Predefined Themes Card -->
+                    <div class="card col-full">
+                        <h2 class="card-title" style="margin-bottom: 8px;">Temas Predefinidos</h2>
+                        <p class="config-section-title">Selecciona un paquete de colores completo</p>
+
+                        <div class="theme-cards" id="theme-cards">
+                            <div class="theme-card" data-theme="default" onclick="applyPresetTheme('default')">
+                                <div class="theme-preview">
+                                    <span style="background:#050b14;"></span>
+                                    <span style="background:#080f1c;"></span>
+                                    <span style="background:#0e756b;"></span>
+                                    <span style="background:#1cb8aa;"></span>
+                                </div>
+                                <div class="theme-card-name">Corporativo</div>
+                                <div class="theme-card-desc">Tema por defecto</div>
+                            </div>
+
+                            <div class="theme-card" data-theme="midnight" onclick="applyPresetTheme('midnight')">
+                                <div class="theme-preview">
+                                    <span style="background:#0a0a1a;"></span>
+                                    <span style="background:#12122a;"></span>
+                                    <span style="background:#6366f1;"></span>
+                                    <span style="background:#818cf8;"></span>
+                                </div>
+                                <div class="theme-card-name">Midnight</div>
+                                <div class="theme-card-desc">Azul profundo</div>
+                            </div>
+
+                            <div class="theme-card" data-theme="forest" onclick="applyPresetTheme('forest')">
+                                <div class="theme-preview">
+                                    <span style="background:#0a1208;"></span>
+                                    <span style="background:#121f0e;"></span>
+                                    <span style="background:#16a34a;"></span>
+                                    <span style="background:#4ade80;"></span>
+                                </div>
+                                <div class="theme-card-name">Forest</div>
+                                <div class="theme-card-desc">Verde naturaleza</div>
+                            </div>
+
+                            <div class="theme-card" data-theme="sunset" onclick="applyPresetTheme('sunset')">
+                                <div class="theme-preview">
+                                    <span style="background:#1a0a0a;"></span>
+                                    <span style="background:#2a1212;"></span>
+                                    <span style="background:#f97316;"></span>
+                                    <span style="background:#fb923c;"></span>
+                                </div>
+                                <div class="theme-card-name">Sunset</div>
+                                <div class="theme-card-desc">Naranja cálido</div>
+                            </div>
+
+                            <div class="theme-card" data-theme="scriptkid" onclick="applyPresetTheme('scriptkid')">
+                                <div class="theme-preview">
+                                    <span style="background:#000000;"></span>
+                                    <span style="background:#0a0a0a;"></span>
+                                    <span style="background:#00ff41;"></span>
+                                    <span style="background:#00cc33;"></span>
+                                </div>
+                                <div class="theme-card-name">Script Kid</div>
+                                <div class="theme-card-desc">H4CK3R M0D3</div>
+                            </div>
+
+                            <div class="theme-card" data-theme="light" onclick="applyPresetTheme('light')">
+                                <div class="theme-preview">
+                                    <span style="background:#f0f4f8;"></span>
+                                    <span style="background:#ffffff;"></span>
+                                    <span style="background:#0e756b;"></span>
+                                    <span style="background:#1cb8aa;"></span>
+                                </div>
+                                <div class="theme-card-name">Claro</div>
+                                <div class="theme-card-desc">Modo claro</div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Behavior Card -->
                     <div class="card col-full">
                         <h2 class="card-title" style="margin-bottom: 8px;">Comportamiento</h2>
@@ -1644,6 +1980,19 @@
                                 </div>
                                 <label class="toggle-switch">
                                     <input type="checkbox" id="animations-toggle" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="config-group">
+                            <div class="pref-row">
+                                <div class="pref-info">
+                                    <h4>Notificaciones de Escritorio</h4>
+                                    <p>Muestra alertas del sistema cuando se completa una generación.</p>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="notifications-toggle">
                                     <span class="toggle-slider"></span>
                                 </label>
                             </div>
@@ -1766,6 +2115,8 @@
             borderRadius: 12,
             compactMode: false,
             animations: true,
+            notifications: false,
+            presetTheme: 'default',
             defaultMonth: 'current'
         };
 
@@ -1866,9 +2217,17 @@
             }
             document.getElementById('animations-toggle').checked = s.animations;
 
+            // Notifications
+            document.getElementById('notifications-toggle').checked = s.notifications;
+
             // Default month
             document.getElementById('default-month-select').value = s.defaultMonth;
             applyDefaultMonth(s.defaultMonth);
+
+            // Theme card highlight
+            document.querySelectorAll('.theme-card').forEach(c => c.classList.remove('active-theme'));
+            const activeCard = document.querySelector(`.theme-card[data-theme="${s.presetTheme || 'default'}"]`);
+            if (activeCard) activeCard.classList.add('active-theme');
         }
 
         function applyDefaultMonth(mode) {
@@ -2046,6 +2405,121 @@
             e.target.value = '';
         });
 
+        // Notifications toggle
+        document.getElementById('notifications-toggle').addEventListener('change', (e) => {
+            currentSettings.notifications = e.target.checked;
+            saveSettings(currentSettings);
+            if (e.target.checked) {
+                if ('Notification' in window && Notification.permission !== 'granted') {
+                    Notification.requestPermission();
+                }
+                showToast('🔔 Notificaciones activadas', 'success');
+            } else {
+                showToast('🔕 Notificaciones desactivadas');
+            }
+        });
+
+        function sendDesktopNotification(title, body) {
+            if (!currentSettings.notifications) return;
+            if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification(title, { body, icon: 'assets/logo_manatech.png' });
+            }
+        }
+
+        // --- Predefined Themes ---
+        const PRESET_THEMES = {
+            default: {
+                lightTheme: false, accentColor: '#0e756b',
+                textColor: '#dde7f3', textSecondaryColor: '#8fa8c8',
+                iconColor: '#8fa8c8', sidebarColor: '#080f1c'
+            },
+            midnight: {
+                lightTheme: false, accentColor: '#6366f1',
+                textColor: '#e0e7ff', textSecondaryColor: '#a5b4fc',
+                iconColor: '#a5b4fc', sidebarColor: '#12122a'
+            },
+            forest: {
+                lightTheme: false, accentColor: '#16a34a',
+                textColor: '#dcfce7', textSecondaryColor: '#86efac',
+                iconColor: '#86efac', sidebarColor: '#121f0e'
+            },
+            sunset: {
+                lightTheme: false, accentColor: '#f97316',
+                textColor: '#fff7ed', textSecondaryColor: '#fdba74',
+                iconColor: '#fdba74', sidebarColor: '#2a1212'
+            },
+            scriptkid: {
+                lightTheme: false, accentColor: '#00ff41',
+                textColor: '#00ff41', textSecondaryColor: '#00cc33',
+                iconColor: '#00ff41', sidebarColor: '#0a0a0a'
+            },
+            light: {
+                lightTheme: true, accentColor: '#0e756b',
+                textColor: '#0f172a', textSecondaryColor: '#475569',
+                iconColor: '#475569', sidebarColor: '#ffffff'
+            }
+        };
+
+        function applyPresetTheme(themeName) {
+            const theme = PRESET_THEMES[themeName];
+            if (!theme) return;
+            Object.assign(currentSettings, theme);
+            currentSettings.presetTheme = themeName;
+            applyAllSettings(currentSettings);
+            saveSettings(currentSettings);
+            showToast(`🎨 Tema "${themeName}" aplicado`, 'success');
+        }
+        // Make it globally accessible for onclick
+        window.applyPresetTheme = applyPresetTheme;
+
+        // --- Dashboard Logic ---
+        let reportHistory = JSON.parse(localStorage.getItem('manatech_report_history') || '[]');
+        let reportCount = reportHistory.length;
+
+        function updateDashboard() {
+            const el = document.getElementById('dash-total-reports');
+            if (el) el.textContent = reportCount;
+
+            const now = new Date();
+            const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+            const monthEl = document.getElementById('dash-current-month');
+            if (monthEl) monthEl.textContent = months[now.getMonth()] + ' ' + now.getFullYear();
+
+            const lastGen = document.getElementById('dash-last-gen');
+            if (lastGen) {
+                if (reportHistory.length > 0) {
+                    const last = reportHistory[reportHistory.length - 1];
+                    lastGen.textContent = last.time || '—';
+                } else {
+                    lastGen.textContent = '—';
+                }
+            }
+        }
+
+        function addActivity(text) {
+            const list = document.getElementById('activity-list');
+            if (!list) return;
+            const now = new Date();
+            const timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+            const li = document.createElement('li');
+            li.className = 'activity-item';
+            li.innerHTML = `<span class="activity-dot" style="background:var(--success)"></span><span class="activity-text">${text}</span><span class="activity-time">${timeStr}</span>`;
+            list.insertBefore(li, list.firstChild);
+        }
+
+        function onReportGenerated(filename) {
+            reportCount++;
+            const now = new Date();
+            const timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+            reportHistory.push({ name: filename, time: timeStr, date: now.toISOString() });
+            localStorage.setItem('manatech_report_history', JSON.stringify(reportHistory));
+            updateDashboard();
+            addActivity(`Reporte generado: ${filename}`);
+            sendDesktopNotification('Reporte Completado', `Se generó exitosamente: ${filename}`);
+        }
+
+        updateDashboard();
+
         // --- File upload Logic ---
         let filesData = { visitas: null, equipos: null };
         function hookUpload(inputId, labelId, badgeId, key) {
@@ -2163,6 +2637,7 @@
                     }
                     successPanel.style.display = 'block';
                     lucide.createIcons();
+                    onReportGenerated(resData.filename || `Reporte_${period}`);
                 } else {
                     const err = await response.json();
                     alert("Error: " + (err.error || "Fallo inesperado"));
