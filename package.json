@@ -8,7 +8,8 @@
   },
   "scripts": {
     "start": "electron .",
-    "pack": "electron-packager . ManatechReports --platform=win32 --arch=x64 --out=dist-standalone --icon=assets/logo_manatech.png --overwrite"
+    "pack": "electron-packager . ManatechReports --platform=win32 --arch=x64 --out=dist-standalone --icon=assets/logo_manatech.png --overwrite",
+    "github": "git add . && git commit -m \"Actualizacion automatica\" & git push origin main"
   },
   "keywords": [],
   "author": "",
