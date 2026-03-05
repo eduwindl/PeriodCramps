@@ -1458,31 +1458,7 @@
             margin-top: 2px;
         }
 
-        /* Preview panel */
-        .preview-frame {
-            width: 100%;
-            min-height: 500px;
-            border: 1px solid var(--border);
-            border-radius: var(--r-md);
-            background: #fff;
-            overflow: hidden;
-        }
 
-        .preview-placeholder {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 400px;
-            color: var(--text-dim);
-            gap: 16px;
-        }
-
-        .preview-placeholder svg {
-            width: 64px;
-            height: 64px;
-            opacity: 0.3;
-        }
 
         /* Notification badge */
         .notif-badge {
@@ -1557,9 +1533,7 @@
                 <a href="#" class="nav-item" onclick="switchTab('view-dashboard', this)">
                     <i data-lucide="bar-chart-3"></i><span>Dashboard</span>
                 </a>
-                <a href="#" class="nav-item" onclick="switchTab('view-preview', this)">
-                    <i data-lucide="eye"></i><span>Preview</span>
-                </a>
+
                 <span class="nav-section-label">Sistema</span>
                 <a href="#" class="nav-item" onclick="switchTab('view-settings', this)">
                     <i data-lucide="settings"></i><span>Configuración UI</span>
@@ -1727,28 +1701,7 @@
                 </div>
             </div>
 
-            <!-- === VIEW: PREVIEW === -->
-            <div id="view-preview" class="view-section">
-                <div class="top-header">
-                    <div class="header-text">
-                        <h1>Vista Previa del Reporte</h1>
-                        <p>Previsualiza el último documento generado antes de descargarlo.</p>
-                    </div>
-                </div>
 
-                <div class="grid">
-                    <div class="card col-full">
-                        <div id="preview-content">
-                            <div class="preview-placeholder">
-                                <i data-lucide="file-search" style="width:64px;height:64px;opacity:0.3;"></i>
-                                <h3 style="color:var(--text-dim);font-weight:400;">No hay reporte disponible</h3>
-                                <p style="color:var(--text-dim);font-size:0.85rem;">Genera un reporte primero desde el
-                                    tab <strong>Generador</strong> para ver la vista previa aquí.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
             <!-- === VIEW: SETTINGS === -->
             <div id="view-settings" class="view-section">
@@ -1865,6 +1818,17 @@
                                     <input type="range" id="border-radius-slider" min="0" max="24" value="12" step="2">
                                     <span class="range-value" id="border-radius-value">12px</span>
                                 </div>
+                            </div>
+                        </div>
+
+                        <div class="config-group">
+                            <div class="pref-row">
+                                <div class="pref-info">
+                                    <h4>Color de Fondo</h4>
+                                    <p>Cambia el color de fondo principal de la aplicación.</p>
+                                </div>
+                                <input type="color" id="bg-color-picker" value="#050b14"
+                                    style="cursor:pointer; width: 46px; height: 28px; border: none; background: transparent; border-radius: 4px;">
                             </div>
                         </div>
 
@@ -2098,9 +2062,14 @@
             document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
 
-            document.getElementById(tabId).classList.add('active');
+            const target = document.getElementById(tabId);
+            if (!target) { console.error('Tab target not found:', tabId); return; }
+            target.classList.add('active');
             element.classList.add('active');
+
+
         }
+        window.switchTab = switchTab;
 
         // --- UI Settings with localStorage Persistence ---
         const SETTINGS_KEY = 'manatech_ui_settings';
@@ -2111,6 +2080,9 @@
             textSecondaryColor: '#8fa8c8',
             iconColor: '#8fa8c8',
             sidebarColor: '#080f1c',
+            bgBase: '#050b14',
+            bgCard: '#0d1826',
+            bgCardAlt: '#112035',
             fontSize: 14,
             borderRadius: 12,
             compactMode: false,
@@ -2119,6 +2091,17 @@
             presetTheme: 'default',
             defaultMonth: 'current'
         };
+
+        // Helper: lighten/darken a hex color for auto-deriving card colors
+        function lightenColor(hex, amount) {
+            let r = parseInt(hex.slice(1, 3), 16);
+            let g = parseInt(hex.slice(3, 5), 16);
+            let b = parseInt(hex.slice(5, 7), 16);
+            r = Math.min(255, Math.max(0, r + amount));
+            g = Math.min(255, Math.max(0, g + amount));
+            b = Math.min(255, Math.max(0, b + amount));
+            return '#' + [r, g, b].map(c => c.toString(16).padStart(2, '0')).join('');
+        }
 
         function loadSettings() {
             try {
@@ -2169,6 +2152,14 @@
             // Accent
             applyAccentColor(s.accentColor);
             document.getElementById('color-picker').value = s.accentColor;
+
+            // Background colors
+            document.documentElement.style.setProperty('--bg-base', s.bgBase);
+            document.documentElement.style.setProperty('--bg-card', s.bgCard);
+            document.documentElement.style.setProperty('--bg-card-alt', s.bgCardAlt);
+            document.documentElement.style.setProperty('--bg-input', lightenColor(s.bgBase, -5));
+            const bgPicker = document.getElementById('bg-color-picker');
+            if (bgPicker) bgPicker.value = s.bgBase;
 
             // Text colors
             document.documentElement.style.setProperty('--text-primary', s.textColor);
@@ -2251,17 +2242,23 @@
         const themeToggle = document.getElementById('theme-toggle');
         themeToggle.addEventListener('change', (e) => {
             currentSettings.lightTheme = e.target.checked;
-            // When switching themes, reset text/icon colors to theme defaults
+            // When switching themes, reset ALL colors to theme defaults
             if (e.target.checked) {
                 currentSettings.textColor = '#0f172a';
                 currentSettings.textSecondaryColor = '#475569';
                 currentSettings.iconColor = '#475569';
                 currentSettings.sidebarColor = '#ffffff';
+                currentSettings.bgBase = '#f0f4f8';
+                currentSettings.bgCard = '#ffffff';
+                currentSettings.bgCardAlt = '#f8fafc';
             } else {
                 currentSettings.textColor = DEFAULT_SETTINGS.textColor;
                 currentSettings.textSecondaryColor = DEFAULT_SETTINGS.textSecondaryColor;
                 currentSettings.iconColor = DEFAULT_SETTINGS.iconColor;
                 currentSettings.sidebarColor = DEFAULT_SETTINGS.sidebarColor;
+                currentSettings.bgBase = DEFAULT_SETTINGS.bgBase;
+                currentSettings.bgCard = DEFAULT_SETTINGS.bgCard;
+                currentSettings.bgCardAlt = DEFAULT_SETTINGS.bgCardAlt;
             }
             applyAllSettings(currentSettings);
             saveSettings(currentSettings);
@@ -2306,6 +2303,18 @@
             document.querySelectorAll('.sidebar svg, .nav-item svg').forEach(svg => {
                 svg.style.stroke = e.target.value;
             });
+            saveSettings(currentSettings);
+        });
+
+        // Background color
+        document.getElementById('bg-color-picker').addEventListener('input', (e) => {
+            currentSettings.bgBase = e.target.value;
+            currentSettings.bgCard = lightenColor(e.target.value, 15);
+            currentSettings.bgCardAlt = lightenColor(e.target.value, 25);
+            document.documentElement.style.setProperty('--bg-base', currentSettings.bgBase);
+            document.documentElement.style.setProperty('--bg-card', currentSettings.bgCard);
+            document.documentElement.style.setProperty('--bg-card-alt', currentSettings.bgCardAlt);
+            document.documentElement.style.setProperty('--bg-input', lightenColor(currentSettings.bgBase, -5));
             saveSettings(currentSettings);
         });
 
@@ -2431,32 +2440,38 @@
             default: {
                 lightTheme: false, accentColor: '#0e756b',
                 textColor: '#dde7f3', textSecondaryColor: '#8fa8c8',
-                iconColor: '#8fa8c8', sidebarColor: '#080f1c'
+                iconColor: '#8fa8c8', sidebarColor: '#080f1c',
+                bgBase: '#050b14', bgCard: '#0d1826', bgCardAlt: '#112035'
             },
             midnight: {
                 lightTheme: false, accentColor: '#6366f1',
                 textColor: '#e0e7ff', textSecondaryColor: '#a5b4fc',
-                iconColor: '#a5b4fc', sidebarColor: '#12122a'
+                iconColor: '#a5b4fc', sidebarColor: '#12122a',
+                bgBase: '#0a0a1a', bgCard: '#141430', bgCardAlt: '#1c1c42'
             },
             forest: {
                 lightTheme: false, accentColor: '#16a34a',
                 textColor: '#dcfce7', textSecondaryColor: '#86efac',
-                iconColor: '#86efac', sidebarColor: '#121f0e'
+                iconColor: '#86efac', sidebarColor: '#121f0e',
+                bgBase: '#0a1208', bgCard: '#142010', bgCardAlt: '#1c2e18'
             },
             sunset: {
                 lightTheme: false, accentColor: '#f97316',
                 textColor: '#fff7ed', textSecondaryColor: '#fdba74',
-                iconColor: '#fdba74', sidebarColor: '#2a1212'
+                iconColor: '#fdba74', sidebarColor: '#2a1212',
+                bgBase: '#1a0a0a', bgCard: '#2a1414', bgCardAlt: '#3a1e1e'
             },
             scriptkid: {
                 lightTheme: false, accentColor: '#00ff41',
                 textColor: '#00ff41', textSecondaryColor: '#00cc33',
-                iconColor: '#00ff41', sidebarColor: '#0a0a0a'
+                iconColor: '#00ff41', sidebarColor: '#0a0a0a',
+                bgBase: '#000000', bgCard: '#0a0a0a', bgCardAlt: '#141414'
             },
             light: {
                 lightTheme: true, accentColor: '#0e756b',
                 textColor: '#0f172a', textSecondaryColor: '#475569',
-                iconColor: '#475569', sidebarColor: '#ffffff'
+                iconColor: '#475569', sidebarColor: '#ffffff',
+                bgBase: '#f0f4f8', bgCard: '#ffffff', bgCardAlt: '#f8fafc'
             }
         };
 
@@ -2638,6 +2653,7 @@
                     successPanel.style.display = 'block';
                     lucide.createIcons();
                     onReportGenerated(resData.filename || `Reporte_${period}`);
+
                 } else {
                     const err = await response.json();
                     alert("Error: " + (err.error || "Fallo inesperado"));
@@ -2657,6 +2673,8 @@
             successPanel.style.display = 'none';
             btnGen.disabled = false;
         });
+
+
 
         lucide.createIcons();
     </script>
