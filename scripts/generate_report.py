@@ -493,7 +493,7 @@ def _add_table_of_contents(doc: Document, year: int, month: int, stats: dict) ->
     sep.paragraph_format.space_after = Pt(4)
 
     # One paragraph per TOC entry
-    for (label, bm_key, indent) in toc_entries:
+    for (label, bm_key, indent) in TOC_ENTRIES:
         anchor = BM.get(bm_key, bm_key)
         para = doc.add_paragraph()
         pf = para.paragraph_format
