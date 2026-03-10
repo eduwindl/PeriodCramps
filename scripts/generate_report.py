@@ -1117,27 +1117,52 @@ def _section_casos_especiales(doc: Document, stats: dict, casos_especiales: list
         return
 
     for idx, caso in enumerate(casos_especiales):
+        fecha = caso.get("fecha", "").strip()
         centro = caso.get("centro", "Centro Desconocido").strip()
+        ticket = caso.get("ticket", "N/A").strip()
+        wo = caso.get("wo", "N/A").strip()
+        tecnico = caso.get("tecnico", "Desconocido").strip()
         desc = caso.get("descripcion", "Sin descripción.").strip()
-        hallazgo = caso.get("hallazgo", "Sin hallazgo.").strip()
         recomendacion = caso.get("recomendacion", "Sin recomendación.").strip()
 
         bkey = f"caso_manual_{idx}"
 
         h_centro = doc.add_heading(f"Incidente Especial: {centro.upper()}", level=2)
         _add_bookmark(h_centro, bkey)
+        
+        doc.add_paragraph().add_run("Fecha: ").bold = True
+        doc.paragraphs[-1].add_run(fecha)
+        
+        doc.add_paragraph().add_run("Nombre del Centro: ").bold = True
+        doc.paragraphs[-1].add_run(centro)
+        
+        doc.add_paragraph().add_run("Ticket: ").bold = True
+        doc.paragraphs[-1].add_run(ticket)
+        
+        doc.add_paragraph().add_run("Número de Trabajo: ").bold = True
+        doc.paragraphs[-1].add_run(wo)
+        
+        doc.add_paragraph().add_run("Técnico: ").bold = True
+        doc.paragraphs[-1].add_run(tecnico)
+        
+        doc.add_paragraph()
 
         h_desc = doc.add_heading("Descripción del Incidente / Levantamiento:", level=3)
         _add_bookmark(h_desc, f"{bkey}_desc")
-        doc.add_paragraph(str(desc))
-
-        h_hall = doc.add_heading("Hallazgo (Falla Encontrada)", level=3)
-        _add_bookmark(h_hall, f"{bkey}_hall")
-        doc.add_paragraph(str(hallazgo))
+        for line in str(desc).split('\n'):
+            if line.strip():
+                p = doc.add_paragraph(line.strip())
+                p.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
 
         h_rec = doc.add_heading("Recomendaciones:", level=3)
         _add_bookmark(h_rec, f"{bkey}_recom")
-        doc.add_paragraph(str(recomendacion))
+        for line in str(recomendacion).split('\n'):
+            if line.strip():
+                p = doc.add_paragraph(line.strip())
+                p.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+        
+        h_anx = doc.add_heading("ANEXOS", level=3)
+        _add_bookmark(h_anx, f"{bkey}_anx")
         doc.add_paragraph()
 
 # ---------------------------------------------------------------------------

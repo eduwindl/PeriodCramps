@@ -1716,21 +1716,37 @@
                 <div class="grid">
                     <div class="card col-full">
                         <h2 class="card-title" style="margin-bottom: 16px;">Agregar Nuevo Caso</h2>
-                        <div class="form-group">
-                            <label class="form-label" style="display:block;margin-bottom:6px;font-size:0.85rem;color:var(--text-secondary);">Centro Educativo</label>
-                            <input type="text" id="caso-centro" class="form-input login-input" placeholder="Nombre completo del centro..." autocomplete="off">
+                        <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                            <div>
+                                <label class="form-label" style="display:block;margin-bottom:6px;font-size:0.85rem;color:var(--text-secondary);">Fecha</label>
+                                <input type="text" id="caso-fecha" class="form-input login-input" placeholder="Ej. 05/02/2026" autocomplete="off" style="margin-bottom:0;">
+                            </div>
+                            <div>
+                                <label class="form-label" style="display:block;margin-bottom:6px;font-size:0.85rem;color:var(--text-secondary);">Nombre del Centro</label>
+                                <input type="text" id="caso-centro" class="form-input login-input" placeholder="Nombre completo del centro..." autocomplete="off" style="margin-bottom:0;">
+                            </div>
+                        </div>
+                        <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
+                            <div>
+                                <label class="form-label" style="display:block;margin-bottom:6px;font-size:0.85rem;color:var(--text-secondary);">Ticket</label>
+                                <input type="text" id="caso-ticket" class="form-input login-input" placeholder="N/A" autocomplete="off" style="margin-bottom:0;">
+                            </div>
+                            <div>
+                                <label class="form-label" style="display:block;margin-bottom:6px;font-size:0.85rem;color:var(--text-secondary);">Número de Trabajo</label>
+                                <input type="text" id="caso-wo" class="form-input login-input" placeholder="Ej. WO1266" autocomplete="off" style="margin-bottom:0;">
+                            </div>
+                            <div>
+                                <label class="form-label" style="display:block;margin-bottom:6px;font-size:0.85rem;color:var(--text-secondary);">Técnico</label>
+                                <input type="text" id="caso-tecnico" class="form-input login-input" placeholder="Nombre del técnico..." autocomplete="off" style="margin-bottom:0;">
+                            </div>
                         </div>
                         <div class="form-group">
-                            <label class="form-label" style="display:block;margin-bottom:6px;font-size:0.85rem;color:var(--text-secondary);">Descripción / Levantamiento</label>
-                            <textarea id="caso-desc" class="form-input login-input" rows="3" placeholder="Describe qué ocurrió u observaste..." style="resize:vertical;"></textarea>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" style="display:block;margin-bottom:6px;font-size:0.85rem;color:var(--text-secondary);">Hallazgo (Falla Encontrada)</label>
-                            <textarea id="caso-hallazgo" class="form-input login-input" rows="2" placeholder="Causa raíz o lo que se detectó..." style="resize:vertical;"></textarea>
+                            <label class="form-label" style="display:block;margin-bottom:6px;font-size:0.85rem;color:var(--text-secondary);">Descripción del Incidente / Levantamiento</label>
+                            <textarea id="caso-desc" class="form-input login-input" rows="4" placeholder="Describe qué ocurrió u observaste..." style="resize:vertical;"></textarea>
                         </div>
                         <div class="form-group">
                             <label class="form-label" style="display:block;margin-bottom:6px;font-size:0.85rem;color:var(--text-secondary);">Recomendaciones</label>
-                            <textarea id="caso-recom" class="form-input login-input" rows="2" placeholder="Pasos a seguir sugeridos..." style="resize:vertical;"></textarea>
+                            <textarea id="caso-recom" class="form-input login-input" rows="4" placeholder="Pasos a seguir sugeridos..." style="resize:vertical;"></textarea>
                         </div>
                         <button class="btn btn-primary" id="btn-add-caso" style="margin-top:8px;">
                             <i data-lucide="plus"></i> Añadir Caso
@@ -2743,8 +2759,15 @@
                         <i data-lucide="trash-2" style="width:16px;height:16px;"></i>
                     </button>
                     <h3 style="margin-bottom:8px; font-size:1rem; color:var(--text-primary);"><i data-lucide="alert-circle" style="width:16px;height:16px;margin-right:6px;vertical-align:-3px;color:var(--accent-bright);"></i>${caso.centro}</h3>
-                    <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:4px;"><strong>Levantamiento:</strong> ${caso.descripcion}</p>
-                    <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:4px;"><strong>Hallazgo:</strong> ${caso.hallazgo}</p>
+                    <div style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:4px; display:grid; grid-template-columns:1fr 1fr;">
+                        <span><strong>Fecha:</strong> ${caso.fecha}</span>
+                        <span><strong>Ticket:</strong> ${caso.ticket}</span>
+                    </div>
+                    <div style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:4px; display:grid; grid-template-columns:1fr 1fr;">
+                        <span><strong>WO:</strong> ${caso.wo}</span>
+                        <span><strong>Técnico:</strong> ${caso.tecnico}</span>
+                    </div>
+                    <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:4px; margin-top:8px;"><strong>Levantamiento:</strong> ${caso.descripcion}</p>
                     <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:0;"><strong>Recomendación:</strong> ${caso.recomendacion}</p>
                 `;
                 listContainer.appendChild(div);
@@ -2759,9 +2782,12 @@
         };
 
         btnAddCaso.addEventListener('click', () => {
+            const fecha = document.getElementById('caso-fecha').value.trim();
             const centro = document.getElementById('caso-centro').value.trim();
+            const ticket = document.getElementById('caso-ticket').value.trim();
+            const wo = document.getElementById('caso-wo').value.trim();
+            const tecnico = document.getElementById('caso-tecnico').value.trim();
             const desc = document.getElementById('caso-desc').value.trim();
-            const hall = document.getElementById('caso-hallazgo').value.trim();
             const rec = document.getElementById('caso-recom').value.trim();
             
             if (!centro) {
@@ -2770,15 +2796,21 @@
             }
             
             casosRegistrados.push({
+                fecha: fecha || "N/A",
                 centro: centro,
+                ticket: ticket || "N/A",
+                wo: wo || "N/A",
+                tecnico: tecnico || "N/A",
                 descripcion: desc || "Sin descripción adicional.",
-                hallazgo: hall || "Ninguno documentado.",
                 recomendacion: rec || "Ninguna."
             });
             
+            document.getElementById('caso-fecha').value = '';
             document.getElementById('caso-centro').value = '';
+            document.getElementById('caso-ticket').value = '';
+            document.getElementById('caso-wo').value = '';
+            document.getElementById('caso-tecnico').value = '';
             document.getElementById('caso-desc').value = '';
-            document.getElementById('caso-hallazgo').value = '';
             document.getElementById('caso-recom').value = '';
             
             showToast('Caso especial añadido a la lista.', 'success');
