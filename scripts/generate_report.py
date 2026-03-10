@@ -77,12 +77,12 @@ def load_config() -> dict:
 # Helpers – Word formatting
 # ---------------------------------------------------------------------------
 
-# Professional DARK color scheme (matching reference screenshot)
-HEADER_BG = "2D3436"       # Very dark charcoal for header
+# Professional color scheme
+HEADER_BG = "1F3864"       # Dark Navy for header
 HEADER_TEXT = RGBColor(0xFF, 0xFF, 0xFF)  # White
-DATA_TEXT = RGBColor(0xFF, 0xFF, 0xFF)     # White text for all data rows
-ALT_ROW_BG = "3D4F5F"     # Dark blue-grey (odd rows)
-ALT_ROW_BG2 = "4A5D6E"    # Slightly lighter dark blue-grey (even rows)
+DATA_TEXT = RGBColor(0x00, 0x00, 0x00)    # Black text for data rows
+ALT_ROW_BG = "FFFFFF"     # White (odd rows)
+ALT_ROW_BG2 = "F2F2F2"    # Light Gray (even rows)
 
 # Maximum characters for text columns before truncation
 MAX_TEXT_LEN = 180
@@ -737,14 +737,14 @@ def _section_descripcion_general(doc: Document, stats: dict, year: int, month: i
 def _section_resumen_operaciones(doc: Document) -> None:
     """Page with large RESUMEN DE OPERACIONES title (matching example's full-page heading)."""
     # Several blank lines to center vertically
-    for _ in range(12):
+    for _ in range(8):
         doc.add_paragraph()
 
     para = doc.add_paragraph()
     para.alignment = WD_ALIGN_PARAGRAPH.CENTER
     run = para.add_run("RESUMEN DE OPERACIONES")
     run.bold = True
-    run.font.size = Pt(84)
+    run.font.size = Pt(48)
     run.font.color.rgb = RGBColor(0x1F, 0x4E, 0x79) # Dark blue
     run.font.name = "Aptos"
 
@@ -1110,8 +1110,21 @@ def _section_ap_pendientes(doc: Document, stats: dict) -> None:
 
 def _section_casos_especiales(doc: Document, stats: dict) -> None:
     """CASOS ESPECIALES section (placeholder for manual content)."""
-    h = doc.add_heading("CASOS ESPECIALES", level=1)
-    _add_bookmark(h, BM["casos"])
+    doc.add_page_break()
+
+    for _ in range(8):
+        doc.add_paragraph()
+    para = doc.add_paragraph()
+    para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run = para.add_run("CASOS ESPECIALES")
+    run.bold = True
+    run.font.size = Pt(48)
+    run.font.color.rgb = RGBColor(0x1F, 0x4E, 0x79) 
+    run.font.name = "Aptos"
+    _add_bookmark(para, BM["casos"])
+    
+    doc.add_page_break()
+
     doc.add_paragraph(
         "En esta sección se registran los incidentes especiales detectados durante "
         "el período. Los detalles de cada caso incluyen la descripción del incidente, "
@@ -1220,10 +1233,13 @@ def build_report(year: int, month: int, config: dict) -> Path:
         doc = Document()
         logger.info("No template found; using blank document.")
 
-    # Apply global font "Aptos" to the document styles
+    # Apply global font "Aptos", black color, and justification
     for style_name in ['Normal', 'Heading 1', 'Heading 2', 'Heading 3', 'List Bullet']:
         if style_name in doc.styles:
             doc.styles[style_name].font.name = 'Aptos'
+            doc.styles[style_name].font.color.rgb = RGBColor(0, 0, 0)
+            if style_name in ['Normal']:
+                doc.styles[style_name].paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
 
     _set_page_margins(doc, config)
 
