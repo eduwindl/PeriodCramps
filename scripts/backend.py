@@ -115,8 +115,15 @@ def generate():
             config=config,
         )
 
+        import json
+        casos_json = request.form.get("casos", "[]")
+        try:
+            casos_list = json.loads(casos_json)
+        except json.JSONDecodeError:
+            casos_list = []
+
         # Build the Word report
-        gr.build_report(year, month, config)
+        gr.build_report(year, month, config, casos_especiales=casos_list)
         base_name = f"reporte_{year}_{month:02d}"
         out_docx_path = REPORTS_DIR / f"{base_name}.docx"
 

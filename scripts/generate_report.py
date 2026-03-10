@@ -269,8 +269,9 @@ def _df_to_table(
         doc.add_paragraph("(Sin datos para este período)", style="Normal")
         return
 
-    bg_header = header_bg or HEADER_BG
-    bg_alt = alt_row_bg or ALT_ROW_BG
+    # FORCING A UNIFIED THEME FOR ALL TABLES
+    bg_header = HEADER_BG
+    bg_alt = ALT_ROW_BG
 
     display_cols = list(col_map.keys()) if col_map else list(df.columns)
     headers = [col_map[c] if col_map and c in col_map else c for c in display_cols]
@@ -453,11 +454,10 @@ TOC_ENTRIES = [
     ("   Reemplazo de equipos electrónicos",              "reemplazo",    2),
     ("   Utilización de ancho de banda",                  "banda",        2),
     ("Centros Visitados en el Período",                   "centros",      1),
-    ("   Centros con UPS Averiados",                      "ups",          2),
-    ("   Detalle de los centros visitados",               "detalle",      2),
-    ("Centros con cambios de series",                     "series",       1),
+    ("   Detalle de los centros visitados (con UPS Averiados)", "detalle",2),
+    ("Centro de cambios de serie realizados",             "series",       1),
     ("UPTIME",                                            "uptime",       1),
-    ("Centros con Mayor Saturación del DHCP",             "dhcp",         1),
+    ("DHCP RECORD",                                       "dhcp",         1),
     ("Access Points Detectados por Configurar",           "ap",           1),
     ("CASOS ESPECIALES",                                  "casos",        0),
 ]
@@ -491,21 +491,6 @@ def _add_table_of_contents(doc: Document, year: int, month: int, stats: dict) ->
     sep_run.font.color.rgb = RGBColor(0x00, 0x3A, 0x96)
     sep.paragraph_format.space_before = Pt(0)
     sep.paragraph_format.space_after = Pt(4)
-
-    toc_entries = list(TOC_ENTRIES)
-    ups_df = stats.get("ups_failed", pd.DataFrame())
-    if not ups_df.empty:
-        centro_col = dp.VISITS_COLS.get("centro", "Centro")
-        if centro_col in ups_df.columns:
-            for _, row in ups_df.iterrows():
-                centro = row[centro_col]
-                bkey = f"caso_{centro.lower().replace(' ', '_')}"
-                bkey = "".join(c for c in bkey if c.isalnum() or c == "_")[:20]  # Valid bookmark
-                toc_entries.append((f"Incidente Especial: {centro.upper()}", bkey, 1))
-                toc_entries.append(("   Descripción del Incidente / Levantamiento:", f"{bkey}_desc", 2))
-                toc_entries.append(("   Hallazgo (Falla Encontrada)", f"{bkey}_hall", 2))
-                toc_entries.append(("   Recomendaciones:", f"{bkey}_recom", 2))
-                toc_entries.append(("   ANEXOS", f"{bkey}_anx", 2))
 
     # One paragraph per TOC entry
     for (label, bm_key, indent) in toc_entries:
@@ -572,7 +557,7 @@ def _add_table_of_contents(doc: Document, year: int, month: int, stats: dict) ->
         r_instr = OxmlElement("w:r")
         instr_text = OxmlElement("w:instrText")
         instr_text.set("{http://www.w3.org/XML/1998/namespace}space", "preserve")
-        instr_text.text = f' PAGEREF {anchor} \\h '
+        instr_text.text = f' PAGEREF "{anchor}" \\h \\* MERGEFORMAT '
         r_instr.append(instr_text)
 
         r_sep = OxmlElement("w:r")
@@ -595,7 +580,7 @@ def _add_table_of_contents(doc: Document, year: int, month: int, stats: dict) ->
         r_val.append(rPr_val)
         
         t_val = OxmlElement("w:t")
-        t_val.text = "-" # Placeholder until Word calculates
+        t_val.text = "1" # Placeholder until Word calculates
         r_val.append(t_val)
 
         r_end = OxmlElement("w:r")
@@ -619,7 +604,8 @@ def _add_table_of_contents(doc: Document, year: int, month: int, stats: dict) ->
 
     note_para = doc.add_paragraph()
     note_run = note_para.add_run(
-        "Tip: Mantener Ctrl + Clic en cualquier entrada del índice para navegar directamente a la sección."
+        "Tip: Mantener Ctrl + Clic en cualquier entrada del índice para navegar directamente a la sección. "
+        "Si los números de página no se actualizan automáticamente, presione Ctrl+E (seleccionar todo) y luego F9."
     )
     note_run.font.size = Pt(8)
     note_run.italic = True
@@ -1020,14 +1006,8 @@ def _section_detalle_visitas(doc: Document, stats: dict) -> None:
 
 
 def _section_cambios_series(doc: Document, stats: dict, year: int, month: int) -> None:
-    """Centros con cambios de series realizados en el periodo."""
-    mes_nombre = MESES_ES.get(month, str(month))
-    last_day = _get_last_day(year, month)
-
-    h = doc.add_heading(
-        f"Centros con cambios de series realizados en el periodo 1-{last_day} {mes_nombre} {year}",
-        level=2
-    )
+    """Centro de cambios de serie realizados."""
+    h = doc.add_heading("Centro de cambios de serie realizados", level=2)
     _add_bookmark(h, BM["series"])
 
     eq_df = stats["equipment_detail"]
@@ -1073,11 +1053,11 @@ def _section_uptime(doc: Document, stats: dict) -> None:
 
 
 def _section_dhcp(doc: Document, stats: dict) -> None:
-    """Centros con Mayor Saturación del DHCP en la Red Wi-Fi."""
-    h = doc.add_heading("Centros con Mayor Saturación del DHCP en la Red Wi-Fi", level=2)
+    """DHCP RECORD section."""
+    doc.add_page_break()
+    h = doc.add_heading("DHCP Récord", level=2)
     _add_bookmark(h, BM["dhcp"])
-    _add_paragraph(
-        doc,
+    doc.add_paragraph(
         "Los siguientes centros presentaron saturación del DHCP igual o mayor al 80% durante el período:"
     )
     dhcp_df = stats["dhcp_saturated"]
@@ -1108,8 +1088,8 @@ def _section_ap_pendientes(doc: Document, stats: dict) -> None:
         )
 
 
-def _section_casos_especiales(doc: Document, stats: dict) -> None:
-    """CASOS ESPECIALES section (placeholder for manual content)."""
+def _section_casos_especiales(doc: Document, stats: dict, casos_especiales: list = None) -> None:
+    """CASOS ESPECIALES section (manual content from GUI)."""
     doc.add_page_break()
 
     for _ in range(8):
@@ -1132,43 +1112,33 @@ def _section_casos_especiales(doc: Document, stats: dict) -> None:
     )
     doc.add_paragraph()
 
-    # If there are UPS failures or special visits, list them  
-    ups_df = stats.get("ups_failed", pd.DataFrame())
-    if not ups_df.empty:
-        centro_col = dp.VISITS_COLS.get("centro", "Centro")
-        obs_col = dp.VISITS_COLS.get("obs", "Observaciones")
-        if centro_col in ups_df.columns:
-            for _, row in ups_df.iterrows():
-                centro = row[centro_col]
-                bkey = f"caso_{centro.lower().replace(' ', '_')}"
-                bkey = "".join(c for c in bkey if c.isalnum() or c == "_")[:20]
-
-                h_centro = doc.add_heading(f"Incidente Especial: {centro.upper()}", level=2)
-                _add_bookmark(h_centro, bkey)
-
-                h_desc = doc.add_heading("Descripción del Incidente / Levantamiento:", level=3)
-                _add_bookmark(h_desc, f"{bkey}_desc")
-                obs = row.get(obs_col, "Sin descripción disponible.")
-                doc.add_paragraph(str(obs))
-
-                h_hall = doc.add_heading("Hallazgo (Falla Encontrada)", level=3)
-                _add_bookmark(h_hall, f"{bkey}_hall")
-                doc.add_paragraph("UPS averiado o equipo defectuoso identificado.")
-
-                h_rec = doc.add_heading("Recomendaciones:", level=3)
-                _add_bookmark(h_rec, f"{bkey}_recom")
-                doc.add_paragraph(
-                    "Se recomienda dar seguimiento al caso y coordinar con el equipo técnico "
-                    "para la resolución definitiva del incidente."
-                )
-
-                h_anx = doc.add_heading("ANEXOS", level=3)
-                _add_bookmark(h_anx, f"{bkey}_anx")
-                doc.add_paragraph("(Fotografías y documentación adjunta)")
-                doc.add_paragraph()
-    else:
+    if not casos_especiales:
         doc.add_paragraph("No se registraron incidentes especiales durante el período.")
+        return
 
+    for idx, caso in enumerate(casos_especiales):
+        centro = caso.get("centro", "Centro Desconocido").strip()
+        desc = caso.get("descripcion", "Sin descripción.").strip()
+        hallazgo = caso.get("hallazgo", "Sin hallazgo.").strip()
+        recomendacion = caso.get("recomendacion", "Sin recomendación.").strip()
+
+        bkey = f"caso_manual_{idx}"
+
+        h_centro = doc.add_heading(f"Incidente Especial: {centro.upper()}", level=2)
+        _add_bookmark(h_centro, bkey)
+
+        h_desc = doc.add_heading("Descripción del Incidente / Levantamiento:", level=3)
+        _add_bookmark(h_desc, f"{bkey}_desc")
+        doc.add_paragraph(str(desc))
+
+        h_hall = doc.add_heading("Hallazgo (Falla Encontrada)", level=3)
+        _add_bookmark(h_hall, f"{bkey}_hall")
+        doc.add_paragraph(str(hallazgo))
+
+        h_rec = doc.add_heading("Recomendaciones:", level=3)
+        _add_bookmark(h_rec, f"{bkey}_recom")
+        doc.add_paragraph(str(recomendacion))
+        doc.add_paragraph()
 
 # ---------------------------------------------------------------------------
 # Page setup helper
@@ -1191,7 +1161,7 @@ def _set_page_margins(doc: Document, config: dict) -> None:
 # Main report builder
 # ---------------------------------------------------------------------------
 
-def build_report(year: int, month: int, config: dict) -> Path:
+def build_report(year: int, month: int, config: dict, casos_especiales: list = None) -> Path:
     """
     Build the complete Word report for the given year/month.
     Follows the structure of the example document:
@@ -1271,11 +1241,11 @@ def build_report(year: int, month: int, config: dict) -> Path:
     # 7. Centros Visitados en el Periodo (Heading 2)
     _section_centros_visitados(doc, all_stats, year, month)
 
-    # 7.1 UPS Averiados (Heading 3)
-    _section_ups_fallidos(doc, all_stats, year, month)
-
-    # 7.2 Detalle de los centros visitados (Heading 3)
+    # 7.1 Detalle de los centros visitados (Heading 3)
     _section_detalle_visitas(doc, all_stats)
+
+    # 7.1 (Extra) Agregando Tabla de UPS Averiados a detalle de centros
+    _section_ups_fallidos(doc, all_stats, year, month)
 
     # 8. Centros con cambios de series (Heading 2)
     _section_cambios_series(doc, all_stats, year, month)
@@ -1290,7 +1260,7 @@ def build_report(year: int, month: int, config: dict) -> Path:
     _section_ap_pendientes(doc, all_stats)
 
     # 12. CASOS ESPECIALES (Heading 1)
-    _section_casos_especiales(doc, all_stats)
+    _section_casos_especiales(doc, all_stats, casos_especiales)
 
     # Force update of fields (like Page Numbers) when opening the document in Word
     try:
