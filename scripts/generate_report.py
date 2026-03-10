@@ -27,7 +27,7 @@ import yaml
 import pandas as pd
 from docx import Document
 from docx.shared import Inches, Pt, RGBColor, Cm
-from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_TAB_ALIGNMENT, WD_TAB_LEADER
 from docx.enum.table import WD_ALIGN_VERTICAL
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
@@ -86,6 +86,25 @@ ALT_ROW_BG2 = "4A5D6E"    # Slightly lighter dark blue-grey (even rows)
 
 # Maximum characters for text columns before truncation
 MAX_TEXT_LEN = 180
+
+# ---------------------------------------------------------------------------
+# Bookmark name constants (must match TOC and section functions)
+# ---------------------------------------------------------------------------
+BM = {
+    "desc_general":     "desc_general",
+    "resumen_ops":      "resumen_operaciones",
+    "avances":          "avances_proyecto",
+    "reemplazo":        "reemplazo_equipos",
+    "banda":            "ancho_banda",
+    "centros":          "centros_visitados",
+    "ups":              "ups_averiados",
+    "detalle":          "detalle_visitas",
+    "series":           "cambios_series",
+    "uptime":           "seccion_uptime",
+    "dhcp":             "dhcp_saturacion",
+    "ap":               "ap_pendientes",
+    "casos":            "casos_especiales",
+}
 
 
 def _set_cell_bg(cell, hex_color: str) -> None:
@@ -187,7 +206,7 @@ def _format_header_row(row, bg_hex: str = None) -> None:
                 run.bold = True
                 run.font.color.rgb = HEADER_TEXT
                 run.font.size = Pt(9)
-                run.font.name = "Calibri"
+                run.font.name = "Aptos"
 
 
 def _add_paragraph(doc: Document, text: str, style: str = "Normal", bold: bool = False,
@@ -196,6 +215,7 @@ def _add_paragraph(doc: Document, text: str, style: str = "Normal", bold: bool =
     para = doc.add_paragraph(style=style)
     run = para.add_run(text)
     run.bold = bold
+    run.font.name = "Aptos"
     if size:
         run.font.size = Pt(size)
     if color:
@@ -232,6 +252,7 @@ def _df_to_table(
     header_bg: str = None,
     alt_row_bg: str = None,
     max_text_len: int = MAX_TEXT_LEN,
+    title: str = None,
 ) -> None:
     """
     Render a DataFrame as a professionally formatted Word table.
@@ -260,7 +281,7 @@ def _df_to_table(
         if not _is_numeric_col(h):
             text_cols.add(i)
 
-    table = doc.add_table(rows=1, cols=len(headers))
+    table = doc.add_table(rows=2 if title else 1, cols=len(headers))
     # Use a borderless style for clean dark-theme look
     try:
         table.style = "Light List"
@@ -276,13 +297,33 @@ def _df_to_table(
         total_w = sum(widths_cm)
         _set_table_width(table, total_w)
 
+    start_row = 1 if title else 0
+
+    if title:
+        title_row = table.rows[0]
+        title_cell = title_row.cells[0]
+        for c in title_row.cells[1:]:
+            title_cell.merge(c)
+        title_cell.text = title
+        _set_cell_bg(title_cell, bg_header) 
+        _set_cell_margins(title_cell, top=20, bottom=20, left=40, right=40)
+        title_cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+        para = title_cell.paragraphs[0]
+        para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        for run in para.runs:
+            run.bold = True
+            run.font.color.rgb = HEADER_TEXT
+            run.font.size = Pt(11)
+            run.font.name = "Aptos"
+
     # Header row
-    hdr_row = table.rows[0]
+    hdr_row = table.rows[start_row]
     for i, header in enumerate(headers):
         cell = hdr_row.cells[i]
         cell.text = header
         _enable_text_wrap(cell)
-    _format_header_row(hdr_row, bg_hex=bg_header)
+    # If title is present, sub-headers are usually lighter
+    _format_header_row(hdr_row, bg_hex="999999" if title else bg_header)
 
     # Data rows
     for row_idx, (_, row) in enumerate(df[display_cols].iterrows()):
@@ -318,7 +359,7 @@ def _df_to_table(
 
             for run in para.runs:
                 run.font.size = Pt(9)
-                run.font.name = "Calibri"
+                run.font.name = "Aptos"
                 run.font.color.rgb = DATA_TEXT  # White text
 
             # Alternating dark row colors
@@ -336,6 +377,256 @@ def _df_to_table(
 def _get_last_day(year: int, month: int) -> int:
     """Return the last day of the given month."""
     return calendar.monthrange(year, month)[1]
+
+
+# ---------------------------------------------------------------------------
+# Bookmark helpers
+# ---------------------------------------------------------------------------
+
+_bookmark_counter = 0
+
+
+def _add_bookmark(paragraph, bookmark_name: str) -> None:
+    """
+    Insert a Word bookmark at the start of the given paragraph.
+    This allows the TOC hyperlinks to jump directly to that position.
+    """
+    global _bookmark_counter
+    _bookmark_counter += 1
+    bm_id = str(_bookmark_counter)
+
+    run = paragraph.add_run("")
+    r = run._r
+
+    bm_start = OxmlElement("w:bookmarkStart")
+    bm_start.set(qn("w:id"), bm_id)
+    bm_start.set(qn("w:name"), bookmark_name)
+    r.addprevious(bm_start)
+
+    bm_end = OxmlElement("w:bookmarkEnd")
+    bm_end.set(qn("w:id"), bm_id)
+    r.addnext(bm_end)
+
+
+def _add_toc_hyperlink(paragraph, text: str, bookmark_name: str,
+                       dots_fill: bool = True, page_label: str = "") -> None:
+    """
+    Add a clickable hyperlink row to the TOC paragraph.
+    Navigates internally to `bookmark_name` inside the same document.
+    """
+    p = paragraph._p
+
+    # Internal hyperlink element
+    hyperlink = OxmlElement("w:hyperlink")
+    hyperlink.set(qn("w:anchor"), bookmark_name)
+    hyperlink.set(qn("w:history"), "1")
+
+    r = OxmlElement("w:r")
+
+    rPr = OxmlElement("w:rPr")
+    # Style: dark navy, underline, same font
+    color_el = OxmlElement("w:color")
+    color_el.set(qn("w:val"), "1F3864")   # dark navy
+    rStyle = OxmlElement("w:rStyle")
+    rStyle.set(qn("w:val"), "Hyperlink")
+    rPr.append(rStyle)
+    rPr.append(color_el)
+    r.append(rPr)
+
+    t = OxmlElement("w:t")
+    t.text = text
+    t.set("{http://www.w3.org/XML/1998/namespace}space", "preserve")
+    r.append(t)
+    hyperlink.append(r)
+    p.append(hyperlink)
+
+
+# ---------------------------------------------------------------------------
+# Table of Contents (Índice)
+# ---------------------------------------------------------------------------
+
+TOC_ENTRIES = [
+    # (display_text,                                      bookmark_key,   indent_level)
+    ("DESCRIPCION GENERAL",                               "desc_general", 0),
+    ("RESUMEN DE OPERACIONES",                            "resumen_ops",  0),
+    ("Avances del Proyecto de Mantenimiento",             "avances",      1),
+    ("   Reemplazo de equipos electrónicos",              "reemplazo",    2),
+    ("   Utilización de ancho de banda",                  "banda",        2),
+    ("Centros Visitados en el Período",                   "centros",      1),
+    ("   Centros con UPS Averiados",                      "ups",          2),
+    ("   Detalle de los centros visitados",               "detalle",      2),
+    ("Centros con cambios de series",                     "series",       1),
+    ("UPTIME",                                            "uptime",       1),
+    ("Centros con Mayor Saturación del DHCP",             "dhcp",         1),
+    ("Access Points Detectados por Configurar",           "ap",           1),
+    ("CASOS ESPECIALES",                                  "casos",        0),
+]
+
+
+def _add_table_of_contents(doc: Document, year: int, month: int, stats: dict) -> None:
+    """
+    Insert a clickable Table of Contents (Índice) page.
+    Each entry is a hyperlink that navigates to the corresponding bookmark.
+    Visual style matches the Word document reference image.
+    """
+    mes_nombre = MESES_ES.get(month, str(month))
+    last_day = _get_last_day(year, month)
+
+    # TOC title
+    title_para = doc.add_paragraph()
+    title_run = title_para.add_run(f"Índice — {mes_nombre.capitalize()} 1 al {last_day} {year}")
+    title_run.bold = True
+    title_run.font.size = Pt(14)
+    title_run.font.color.rgb = RGBColor(0x00, 0x3A, 0x96)  # dark blue
+    title_run.font.name = "Aptos"
+    title_para.paragraph_format.space_after = Pt(6)
+    title_para.paragraph_format.space_before = Pt(0)
+
+    # Horizontal separator
+    sep = doc.add_paragraph()
+    sep_run = sep.add_run(
+        "─" * 80
+    )
+    sep_run.font.size = Pt(8)
+    sep_run.font.color.rgb = RGBColor(0x00, 0x3A, 0x96)
+    sep.paragraph_format.space_before = Pt(0)
+    sep.paragraph_format.space_after = Pt(4)
+
+    toc_entries = list(TOC_ENTRIES)
+    ups_df = stats.get("ups_failed", pd.DataFrame())
+    if not ups_df.empty:
+        centro_col = dp.VISITS_COLS.get("centro", "Centro")
+        if centro_col in ups_df.columns:
+            for _, row in ups_df.iterrows():
+                centro = row[centro_col]
+                bkey = f"caso_{centro.lower().replace(' ', '_')}"
+                bkey = "".join(c for c in bkey if c.isalnum() or c == "_")[:20]  # Valid bookmark
+                toc_entries.append((f"Incidente Especial: {centro.upper()}", bkey, 1))
+                toc_entries.append(("   Descripción del Incidente / Levantamiento:", f"{bkey}_desc", 2))
+                toc_entries.append(("   Hallazgo (Falla Encontrada)", f"{bkey}_hall", 2))
+                toc_entries.append(("   Recomendaciones:", f"{bkey}_recom", 2))
+                toc_entries.append(("   ANEXOS", f"{bkey}_anx", 2))
+
+    # One paragraph per TOC entry
+    for (label, bm_key, indent) in toc_entries:
+        anchor = BM.get(bm_key, bm_key)
+        para = doc.add_paragraph()
+        pf = para.paragraph_format
+        pf.space_before = Pt(2)
+        pf.space_after = Pt(2)
+        pf.tab_stops.add_tab_stop(Cm(16.0), WD_TAB_ALIGNMENT.RIGHT, WD_TAB_LEADER.DOTS)
+
+        # Leading indent spaces
+        indent_spaces = "    " * indent
+
+        # Build the clickable entry (hyperlink)
+        p = para._p
+        hyperlink = OxmlElement("w:hyperlink")
+        hyperlink.set(qn("w:anchor"), anchor)
+        hyperlink.set(qn("w:history"), "1")
+
+        r = OxmlElement("w:r")
+        rPr = OxmlElement("w:rPr")
+
+        # Font
+        rFont = OxmlElement("w:rFonts")
+        rFont.set(qn("w:ascii"), "Aptos")
+        rFont.set(qn("w:hAnsi"), "Aptos")
+        rPr.append(rFont)
+
+        sz = OxmlElement("w:sz")
+        sz.set(qn("w:val"), "20" if indent == 0 else "18")
+        rPr.append(sz)
+
+        # Bold for top-level entries
+        if indent == 0:
+            bold_el = OxmlElement("w:b")
+            rPr.append(bold_el)
+
+        # Color
+        c_el = OxmlElement("w:color")
+        c_el.set(qn("w:val"), "1F3864" if indent == 0 else "2D3748")
+        rPr.append(c_el)
+
+        r.append(rPr)
+        t = OxmlElement("w:t")
+        t.text = indent_spaces + label
+        t.set("{http://www.w3.org/XML/1998/namespace}space", "preserve")
+        r.append(t)
+        
+        hyperlink.append(r)
+        p.append(hyperlink)
+
+        # Add TAB for the dot leader
+        r_tab = OxmlElement("w:r")
+        tab_el = OxmlElement("w:tab")
+        r_tab.append(tab_el)
+        p.append(r_tab)
+
+        # Build the PAGEREF field outside the hyperlink (otherwise Word corrupts)
+        r_fld_begin = OxmlElement("w:r")
+        fldChar_begin = OxmlElement("w:fldChar")
+        fldChar_begin.set(qn("w:fldCharType"), "begin")
+        r_fld_begin.append(fldChar_begin)
+
+        r_instr = OxmlElement("w:r")
+        instr_text = OxmlElement("w:instrText")
+        instr_text.set("{http://www.w3.org/XML/1998/namespace}space", "preserve")
+        instr_text.text = f' PAGEREF {anchor} \\h '
+        r_instr.append(instr_text)
+
+        r_sep = OxmlElement("w:r")
+        fldChar_sep = OxmlElement("w:fldChar")
+        fldChar_sep.set(qn("w:fldCharType"), "separate")
+        r_sep.append(fldChar_sep)
+
+        r_val = OxmlElement("w:r")
+        rPr_val = OxmlElement("w:rPr")
+        rPr_val.append(OxmlElement("w:noProof"))
+        
+        # Font for page number
+        rPr_val_sz = OxmlElement("w:sz")
+        rPr_val_sz.set(qn("w:val"), "18")
+        rPr_val.append(rPr_val_sz)
+        
+        rPr_val_c = OxmlElement("w:color")
+        rPr_val_c.set(qn("w:val"), "888888")
+        rPr_val.append(rPr_val_c)
+        r_val.append(rPr_val)
+        
+        t_val = OxmlElement("w:t")
+        t_val.text = "-" # Placeholder until Word calculates
+        r_val.append(t_val)
+
+        r_end = OxmlElement("w:r")
+        fldChar_end = OxmlElement("w:fldChar")
+        fldChar_end.set(qn("w:fldCharType"), "end")
+        r_end.append(fldChar_end)
+
+        p.append(r_fld_begin)
+        p.append(r_instr)
+        p.append(r_sep)
+        p.append(r_val)
+        p.append(r_end)
+
+    # Footer separator
+    sep2 = doc.add_paragraph()
+    sep2_run = sep2.add_run("─" * 80)
+    sep2_run.font.size = Pt(8)
+    sep2_run.font.color.rgb = RGBColor(0x00, 0x3A, 0x96)
+    sep2.paragraph_format.space_before = Pt(4)
+    sep2.paragraph_format.space_after = Pt(4)
+
+    note_para = doc.add_paragraph()
+    note_run = note_para.add_run(
+        "Tip: Mantener Ctrl + Clic en cualquier entrada del índice para navegar directamente a la sección."
+    )
+    note_run.font.size = Pt(8)
+    note_run.italic = True
+    note_run.font.color.rgb = RGBColor(0x88, 0x88, 0x88)
+    note_run.font.name = "Aptos"
+
+    doc.add_page_break()
 
 
 # ---------------------------------------------------------------------------
@@ -387,6 +678,7 @@ def _add_cover(doc: Document, year: int, month: int, config: dict) -> None:
         f"Reporte de Operaciones MINERD ({mes_nombre} 1 al {last_day} {year})"
     )
     run.font.size = Pt(16)
+    run.font.name = "Aptos"
     run.font.color.rgb = RGBColor(0x00, 0x3A, 0x96)  # Dark blue matching example
 
     # "Altice" subtitle
@@ -394,6 +686,7 @@ def _add_cover(doc: Document, year: int, month: int, config: dict) -> None:
     alt_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
     run2 = alt_para.add_run("Altice")
     run2.font.size = Pt(16)
+    run2.font.name = "Aptos"
     run2.font.color.rgb = RGBColor(0xF4, 0x8B, 0x00)  # Orange matching example
 
     doc.add_page_break()
@@ -401,7 +694,8 @@ def _add_cover(doc: Document, year: int, month: int, config: dict) -> None:
 
 def _section_descripcion_general(doc: Document, stats: dict, year: int, month: int) -> None:
     """DESCRIPCION GENERAL section matching the example."""
-    doc.add_heading("DESCRIPCION GENERAL", level=1)
+    heading = doc.add_heading("DESCRIPCION GENERAL", level=1)
+    _add_bookmark(heading, BM["desc_general"])
 
     vs = stats["visit_summary"]
     es = stats["equipment_summary"]
@@ -443,21 +737,29 @@ def _section_descripcion_general(doc: Document, stats: dict, year: int, month: i
 def _section_resumen_operaciones(doc: Document) -> None:
     """Page with large RESUMEN DE OPERACIONES title (matching example's full-page heading)."""
     # Several blank lines to center vertically
-    for _ in range(14):
+    for _ in range(12):
         doc.add_paragraph()
 
-    h = doc.add_heading("RESUMEN DE OPERACIONES", level=1)
-    h.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    para = doc.add_paragraph()
+    para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run = para.add_run("RESUMEN DE OPERACIONES")
+    run.bold = True
+    run.font.size = Pt(84)
+    run.font.color.rgb = RGBColor(0x1F, 0x4E, 0x79) # Dark blue
+    run.font.name = "Aptos"
+
+    _add_bookmark(para, BM["resumen_ops"])
 
     doc.add_page_break()
 
 
 def _section_avances_proyecto(doc: Document, stats: dict, year: int, month: int) -> None:
     """Avances del Proyecto section with equipment replacement details."""
-    doc.add_heading(
+    h = doc.add_heading(
         "Avances del Proyecto de Mantenimiento a la Conectividad de los Centros Educativos.",
         level=2
     )
+    _add_bookmark(h, BM["avances"])
 
     doc.add_paragraph(
         "Concluida la fase de configuración, todos los centros educativos han sido "
@@ -472,7 +774,8 @@ def _section_avances_proyecto(doc: Document, stats: dict, year: int, month: int)
 
 def _section_reemplazo_equipos(doc: Document, stats: dict) -> None:
     """Reemplazo de equipos electrónicos sub-section."""
-    doc.add_heading("Reemplazo de equipos electrónicos", level=3)
+    h = doc.add_heading("Reemplazo de equipos electrónicos", level=3)
+    _add_bookmark(h, BM["reemplazo"])
     doc.add_paragraph()
 
     es = stats["equipment_summary"]
@@ -505,7 +808,8 @@ def _section_reemplazo_equipos(doc: Document, stats: dict) -> None:
 
 def _section_bandwidth(doc: Document, stats: dict) -> None:
     """Utilización de ancho de banda - 3-column table matching the example."""
-    doc.add_heading("Utilización de ancho de banda de los centros educativos.", level=3)
+    h = doc.add_heading("Utilización de ancho de banda de los centros educativos.", level=3)
+    _add_bookmark(h, BM["banda"])
     doc.add_paragraph()
 
     visits_detail = stats["visits_detail"]
@@ -578,21 +882,46 @@ def _section_centros_visitados(doc: Document, stats: dict, year: int, month: int
     mes_nombre = MESES_ES.get(month, str(month))
     last_day = _get_last_day(year, month)
 
-    doc.add_heading(
+    h = doc.add_heading(
         f"Centros Visitados en el Periodo 1 – {last_day} {mes_nombre} {year}.",
         level=2
     )
+    _add_bookmark(h, BM["centros"])
 
-    visits = stats["visits_detail"]
-    cols_map = {
-        dp.VISITS_COLS["centro"]: "Centro",
-        dp.VISITS_COLS["provincia"]: "Provincia",
-        dp.VISITS_COLS["fecha"]: "Fecha Visita",
-        dp.VISITS_COLS["uptime"]: "Uptime (%)",
-        dp.VISITS_COLS["obs"]: "Observaciones",
-    }
-    available = {k: v for k, v in cols_map.items() if k in visits.columns}
-    _df_to_table(doc, visits, col_map=available, widths_cm=[5.0, 3.0, 3.0, 2.5, 4.0])
+    vs = stats["visit_summary"]
+    total = vs["total_visits"]
+    
+    doc.add_paragraph(
+        f"Durante las {total} visitas realizadas, se encontraron los siguientes hallazgos principales:"
+    )
+    
+    hz_df = stats.get("hallazgos_summary", pd.DataFrame())
+    if not hz_df.empty:
+        for _, row in hz_df.iterrows():
+            hz = row.get("Hallazgos", "Otros")
+            cnt = row.get("Cantidad", 0)
+            if hz != "Total":
+                doc.add_paragraph(f"• {hz}: {cnt} casos", style="Normal") # Replaced List Bullet with simple bullet format
+
+    doc.add_paragraph()
+    p_info = doc.add_paragraph(
+        "La mayoría de los centros estaban operativos al momento de la visita. "
+        "Sin embargo, se destacan incidencias frecuentes relacionadas con la configuración de "
+        "equipos y fallas eléctricas, lo que sugiere reforzar la gestión remota, el respaldo de "
+        "configuraciones y la seguridad física."
+    )
+    p_info.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+    doc.add_paragraph()
+    
+    if not hz_df.empty:
+        # Create table with super header "Principales Causas" -> "Hallazgos", "Cantidad"
+        _df_to_table(
+            doc, hz_df,
+            col_map={"Hallazgos": "Hallazgos", "Cantidad": "Cantidad"},
+            header_bg="004696",
+            widths_cm=[9.0, 3.0],
+            title="Principales Causas"
+        )
 
 
 def _section_ups_fallidos(doc: Document, stats: dict, year: int, month: int) -> None:
@@ -600,47 +929,94 @@ def _section_ups_fallidos(doc: Document, stats: dict, year: int, month: int) -> 
     mes_nombre = MESES_ES.get(month, str(month))
     last_day = _get_last_day(year, month)
 
-    doc.add_heading(
+    h = doc.add_heading(
         f"Centros con UPS Averiados visitados durante el periodo 1 - {last_day} {mes_nombre} {year}.",
         level=3
     )
+    _add_bookmark(h, BM["ups"])
+
+    vs = stats["visit_summary"]
+    total = vs["total_visits"]
+    ups_ok = vs["ups_ok"]
+    ups_fail = vs["ups_failures"]
+    
+    pct_ok = int(round(100 * ups_ok / total)) if total else 0
+    pct_fail = int(round(100 * ups_fail / total)) if total else 0
+
+    p1 = doc.add_paragraph(
+        f"En la evaluación realizada sobre el parque de UPS instalados, se identificó un total de {total} unidades. "
+        f"De estas, {ups_ok} se encuentran en estado operativo, lo que representa aproximadamente el {pct_ok}% del total. "
+        f"Sin embargo, {ups_fail} unidades ({pct_fail}%) presentan condiciones de avería, lo cual requiere atención "
+        f"técnica para su reparación o sustitución."
+    )
+    p1.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+
+    p2 = doc.add_paragraph(
+        "Este diagnóstico refleja un nivel general positivo de operatividad, pero pone en evidencia la necesidad "
+        "de intervención en los equipos fuera de servicio con el objetivo de garantizar la continuidad energética y "
+        "la protección de los equipos conectados, especialmente en entornos críticos como salas de servidores, "
+        "aulas digitales o infraestructuras de red."
+    )
+    p2.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+
+    p3 = doc.add_paragraph(
+        "Se recomienda priorizar el mantenimiento correctivo de los UPS averiados y considerar la "
+        "implementación de un plan de mantenimiento preventivo que permita anticipar futuras fallas."
+    )
+    p3.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+    doc.add_paragraph()
+
+    # Add UPS summary table
+    summary_df = pd.DataFrame([
+        {"Estatus de UPS": "Averiado", "Cantidad": ups_fail},
+        {"Estatus de UPS": "Operativo", "Cantidad": ups_ok},
+        {"Estatus de UPS": "Total", "Cantidad": total}
+    ])
+    
+    _df_to_table(
+        doc, summary_df,
+        col_map={"Estatus de UPS": "Estatus de UPS", "Cantidad": "Cantidad"},
+        header_bg="004696",
+        widths_cm=[8.0, 3.0], 
+        title="Estado de los UPS",
+    )
+
+    doc.add_paragraph()
 
     ups_df = stats["ups_failed"]
     if ups_df.empty:
         doc.add_paragraph("No se registraron centros con UPS averiados durante el período.")
         return
 
+    # User requested to remove observaciones and fecha from this particular table
     cols_map = {
         dp.VISITS_COLS["centro"]: "Centro",
         dp.VISITS_COLS["provincia"]: "Provincia",
-        dp.VISITS_COLS["fecha"]: "Fecha Visita",
         dp.VISITS_COLS["ups"]: "Estado UPS",
-        dp.VISITS_COLS["obs"]: "Observaciones",
     }
     available = {k: v for k, v in cols_map.items() if k in ups_df.columns}
     _df_to_table(doc, ups_df, col_map=available,
-                 header_bg="000000", widths_cm=[5.0, 3.0, 3.0, 3.0, 4.0])
+                 header_bg="000000", widths_cm=[6.0, 4.0, 4.0])
 
 
 def _section_detalle_visitas(doc: Document, stats: dict) -> None:
     """Detalle de los centros visitados."""
-    doc.add_heading("Detalle de los centros visitados.", level=3)
+    h = doc.add_heading("Detalle de los centros visitados.", level=3)
+    _add_bookmark(h, BM["detalle"])
 
     visits = stats["visits_detail"]
     cols_map = {
         dp.VISITS_COLS["centro"]: "Centro",
         dp.VISITS_COLS["provincia"]: "Provincia",
-        dp.VISITS_COLS["fecha"]: "Fecha",
         dp.VISITS_COLS["ups"]: "UPS",
         dp.VISITS_COLS["bandwidth"]: "BW (%)",
         dp.VISITS_COLS["dhcp"]: "DHCP (%)",
         dp.VISITS_COLS["ap"]: "AP Pend.",
         dp.VISITS_COLS["uptime"]: "Uptime (%)",
-        dp.VISITS_COLS["obs"]: "Observaciones",
     }
     available = {k: v for k, v in cols_map.items() if k in visits.columns}
     _df_to_table(doc, visits, col_map=available,
-                 widths_cm=[4.0, 2.5, 2.5, 2.0, 1.8, 1.8, 1.5, 2.0, 3.5])
+                 widths_cm=[5.0, 3.0, 2.0, 2.0, 2.0, 1.5, 2.0])
 
 
 def _section_cambios_series(doc: Document, stats: dict, year: int, month: int) -> None:
@@ -648,15 +1024,15 @@ def _section_cambios_series(doc: Document, stats: dict, year: int, month: int) -
     mes_nombre = MESES_ES.get(month, str(month))
     last_day = _get_last_day(year, month)
 
-    doc.add_heading(
+    h = doc.add_heading(
         f"Centros con cambios de series realizados en el periodo 1-{last_day} {mes_nombre} {year}",
         level=2
     )
+    _add_bookmark(h, BM["series"])
 
     eq_df = stats["equipment_detail"]
     cols_map = {
         dp.EQUIPMENT_COLS["centro"]: "Centro",
-        dp.EQUIPMENT_COLS["fecha"]: "Fecha",
         dp.EQUIPMENT_COLS["equipo"]: "Equipo",
         dp.EQUIPMENT_COLS["serie_ant"]: "Serie Anterior",
         dp.EQUIPMENT_COLS["serie_nueva"]: "Serie Nueva",
@@ -665,12 +1041,13 @@ def _section_cambios_series(doc: Document, stats: dict, year: int, month: int) -
     }
     available = {k: v for k, v in cols_map.items() if k in eq_df.columns}
     _df_to_table(doc, eq_df, col_map=available,
-                 widths_cm=[3.5, 2.5, 2.5, 3.0, 3.0, 2.5, 2.5])
+                 widths_cm=[3.5, 2.5, 3.0, 3.0, 2.5, 2.5])
 
 
 def _section_uptime(doc: Document, stats: dict) -> None:
     """UPTIME section."""
-    doc.add_heading("UPTIME", level=2)
+    h = doc.add_heading("UPTIME", level=2)
+    _add_bookmark(h, BM["uptime"])
 
     uptime = stats["uptime"]
     _add_paragraph(
@@ -697,7 +1074,8 @@ def _section_uptime(doc: Document, stats: dict) -> None:
 
 def _section_dhcp(doc: Document, stats: dict) -> None:
     """Centros con Mayor Saturación del DHCP en la Red Wi-Fi."""
-    doc.add_heading("Centros con Mayor Saturación del DHCP en la Red Wi-Fi", level=2)
+    h = doc.add_heading("Centros con Mayor Saturación del DHCP en la Red Wi-Fi", level=2)
+    _add_bookmark(h, BM["dhcp"])
     _add_paragraph(
         doc,
         "Los siguientes centros presentaron saturación del DHCP igual o mayor al 80% durante el período:"
@@ -713,7 +1091,8 @@ def _section_dhcp(doc: Document, stats: dict) -> None:
 
 def _section_ap_pendientes(doc: Document, stats: dict) -> None:
     """Access Points Detectados por Configurar."""
-    doc.add_heading("Access Points Detectados por Configurar.", level=2)
+    h = doc.add_heading("Access Points Detectados por Configurar.", level=2)
+    _add_bookmark(h, BM["ap"])
     _add_paragraph(
         doc,
         "A continuación se listan los centros donde se detectaron Access Points pendientes de configuración:"
@@ -731,7 +1110,8 @@ def _section_ap_pendientes(doc: Document, stats: dict) -> None:
 
 def _section_casos_especiales(doc: Document, stats: dict) -> None:
     """CASOS ESPECIALES section (placeholder for manual content)."""
-    doc.add_heading("CASOS ESPECIALES", level=1)
+    h = doc.add_heading("CASOS ESPECIALES", level=1)
+    _add_bookmark(h, BM["casos"])
     doc.add_paragraph(
         "En esta sección se registran los incidentes especiales detectados durante "
         "el período. Los detalles de cada caso incluyen la descripción del incidente, "
@@ -740,25 +1120,37 @@ def _section_casos_especiales(doc: Document, stats: dict) -> None:
     doc.add_paragraph()
 
     # If there are UPS failures or special visits, list them  
-    ups_df = stats["ups_failed"]
+    ups_df = stats.get("ups_failed", pd.DataFrame())
     if not ups_df.empty:
-        centro_col = dp.VISITS_COLS["centro"]
+        centro_col = dp.VISITS_COLS.get("centro", "Centro")
+        obs_col = dp.VISITS_COLS.get("obs", "Observaciones")
         if centro_col in ups_df.columns:
             for _, row in ups_df.iterrows():
                 centro = row[centro_col]
-                doc.add_heading(f"Incidente Especial: {centro.upper()}", level=2)
+                bkey = f"caso_{centro.lower().replace(' ', '_')}"
+                bkey = "".join(c for c in bkey if c.isalnum() or c == "_")[:20]
 
-                doc.add_heading("Descripción del Incidente / Levantamiento:", level=3)
-                obs = row.get(dp.VISITS_COLS["obs"], "Sin descripción disponible.")
+                h_centro = doc.add_heading(f"Incidente Especial: {centro.upper()}", level=2)
+                _add_bookmark(h_centro, bkey)
+
+                h_desc = doc.add_heading("Descripción del Incidente / Levantamiento:", level=3)
+                _add_bookmark(h_desc, f"{bkey}_desc")
+                obs = row.get(obs_col, "Sin descripción disponible.")
                 doc.add_paragraph(str(obs))
 
-                doc.add_heading("Recomendaciones:", level=3)
+                h_hall = doc.add_heading("Hallazgo (Falla Encontrada)", level=3)
+                _add_bookmark(h_hall, f"{bkey}_hall")
+                doc.add_paragraph("UPS averiado o equipo defectuoso identificado.")
+
+                h_rec = doc.add_heading("Recomendaciones:", level=3)
+                _add_bookmark(h_rec, f"{bkey}_recom")
                 doc.add_paragraph(
                     "Se recomienda dar seguimiento al caso y coordinar con el equipo técnico "
                     "para la resolución definitiva del incidente."
                 )
 
-                doc.add_heading("ANEXOS", level=3)
+                h_anx = doc.add_heading("ANEXOS", level=3)
+                _add_bookmark(h_anx, f"{bkey}_anx")
                 doc.add_paragraph("(Fotografías y documentación adjunta)")
                 doc.add_paragraph()
     else:
@@ -803,12 +1195,13 @@ def build_report(year: int, month: int, config: dict) -> Path:
 
     logger.info(f"Generating report for {period_label} → {out_path}")
 
-    # --- Load data ---
+    # --- Load data (Excel + optional SQL enrichment) ---
     visits_all, visits_month, equip_all, equip_month = dp.load_and_prepare(
         visits_path=resolve(config["paths"]["visits_file"]),
         equipment_path=resolve(config["paths"]["equipment_file"]),
         year=year,
         month=month,
+        config=config,
     )
 
     # --- Compute statistics ---
@@ -827,6 +1220,11 @@ def build_report(year: int, month: int, config: dict) -> Path:
         doc = Document()
         logger.info("No template found; using blank document.")
 
+    # Apply global font "Aptos" to the document styles
+    for style_name in ['Normal', 'Heading 1', 'Heading 2', 'Heading 3', 'List Bullet']:
+        if style_name in doc.styles:
+            doc.styles[style_name].font.name = 'Aptos'
+
     _set_page_margins(doc, config)
 
     # ===================================================================
@@ -835,6 +1233,9 @@ def build_report(year: int, month: int, config: dict) -> Path:
 
     # 1. Cover page
     _add_cover(doc, year, month, config)
+
+    # 1b. TABLE OF CONTENTS (Índice clickeable) – immediately after cover
+    _add_table_of_contents(doc, year, month, all_stats)
 
     # 2. DESCRIPCION GENERAL (page 1 after cover)
     _section_descripcion_general(doc, all_stats, year, month)
@@ -875,10 +1276,24 @@ def build_report(year: int, month: int, config: dict) -> Path:
     # 12. CASOS ESPECIALES (Heading 1)
     _section_casos_especiales(doc, all_stats)
 
-    # --- Save ---
+    # Force update of fields (like Page Numbers) when opening the document in Word
+    try:
+        settings = doc.settings.element
+        update_fields = doc.settings.element.find(qn("w:updateFields"))
+        if update_fields is None:
+            update_fields = OxmlElement("w:updateFields")
+            update_fields.set(qn("w:val"), "true")
+            settings.append(update_fields)
+        else:
+            update_fields.set(qn("w:val"), "true")
+    except Exception as e:
+        logger.warning(f"Could not enforce field updates: {e}")
+
+    # --- Save Complete ---
     out_path.parent.mkdir(parents=True, exist_ok=True)
     doc.save(str(out_path))
     logger.info(f"Report saved: {out_path}")
+    
     return out_path
 
 

@@ -106,12 +106,13 @@ def generate():
         dt = datetime.strptime(period, "%Y-%m")
         year, month = dt.year, dt.month
 
-        # Load and filter data for the period
+        # Load and filter data for the period (pass config for SQL enrichment)
         _, visits_month, _, equip_month = dp.load_and_prepare(
             visits_path=visitas_path,
             equipment_path=equipos_path,
             year=year,
-            month=month
+            month=month,
+            config=config,
         )
 
         # Build the Word report

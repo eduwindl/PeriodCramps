@@ -30,6 +30,7 @@ VISITS_COLS = {
     "dhcp": "DHCP_saturacion",
     "ap": "AP_pendientes",
     "uptime": "Uptime",
+    "hallazgos": "Hallazgos",
     "obs": "Observaciones",
 }
 
@@ -78,8 +79,11 @@ VISITS_COL_ALIASES = {
     "Uptime": [
         "Uptime", "Disponibilidad", "Uptime %",
     ],
+    "Hallazgos": [
+        "Hallazgos", "Hallazgo", "Problema",
+    ],
     "Observaciones": [
-        "Observaciones", "Comentarios", "Notas", "Hallazgos",
+        "Observaciones", "Comentarios", "Notas", 
         "Descripcion", "Detalle",
     ],
 }
@@ -376,9 +380,12 @@ def load_and_prepare(
     equipment_path: str | Path,
     year: int,
     month: int,
+    config: dict | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
     Load both Excel files, clean them, and return month-filtered DataFrames.
+    If `config` is provided and SQL is enabled, DHCP/Uptime columns in the
+    month-filtered visits DataFrame will be enriched from the database.
 
     Returns
     -------
@@ -391,5 +398,18 @@ def load_and_prepare(
     equip_raw = load_excel(equipment_path)
     equip_all = clean_equipment(equip_raw)
     equip_month = filter_equipment_by_month(equip_all, year, month)
+
+    # --------------------------------------------------------
+    # SQL enrichment (DHCP & Uptime) – non-breaking
+    # --------------------------------------------------------
+    if config is not None:
+        try:
+            import sql_connector as sc   # sibling module in scripts/
+            logger.info("SQL enrichment: attempting to load DHCP / Uptime from database …")
+            visits_month = sc.enrich_visits_with_sql(visits_month, config, year, month)
+        except ImportError:
+            logger.warning("sql_connector module not found; skipping SQL enrichment.")
+        except Exception as exc:
+            logger.warning(f"SQL enrichment error (non-fatal): {exc}")
 
     return visits_all, visits_month, equip_all, equip_month

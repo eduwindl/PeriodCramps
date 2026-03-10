@@ -175,6 +175,26 @@ def get_uptime_stats(visits: pd.DataFrame, low_threshold: float = 95.0) -> dict[
     }
 
 
+def get_hallazgos_summary(visits: pd.DataFrame) -> pd.DataFrame:
+    """Return count of visits grouped by hallazgo."""
+    h_col = VISITS_COLS.get("hallazgos", "Hallazgos")
+    if h_col not in visits.columns:
+        return pd.DataFrame()
+
+    counts = (
+        visits[h_col]
+        .value_counts(dropna=True)
+        .reset_index()
+    )
+    counts.columns = ["Hallazgos", "Cantidad"]
+    
+    # Add a Total row
+    total = counts["Cantidad"].sum()
+    if total > 0:
+        counts.loc[len(counts)] = ["Total", total]
+
+    return counts
+
 # ---------------------------------------------------------------------------
 # Equipment statistics
 # ---------------------------------------------------------------------------
@@ -264,6 +284,7 @@ def build_all_stats(
 
     return {
         "visit_summary": compute_visit_summary(visits),
+        "hallazgos_summary": get_hallazgos_summary(visits),
         "ups_failed": get_ups_failed_centers(visits),
         "high_bandwidth": get_high_bandwidth_centers(visits, threshold=bw_thresh),
         "dhcp_saturated": get_dhcp_saturated_centers(visits, threshold=dhcp_thresh),

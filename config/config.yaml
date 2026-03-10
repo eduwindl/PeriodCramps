@@ -56,3 +56,35 @@ company:
   name: "Manatech"
   department: "Dirección de Mantenimiento de Conectividad"
   contact: "mantenimiento@manatech.com"
+
+# ============================================================
+# SQL Server – Conexión a Base de Datos
+# ============================================================
+database:
+  enabled: true                          # false = solo usa Excel
+  driver: "ODBC Driver 18 for SQL Server"
+  server: "10.1.0.15"
+  database: "MINERD"
+  trusted_connection: false              # false = SQL Authentication
+  username: "ewinter"
+  password: "SoNoHead?69"
+  timeout: 30
+
+  # Tablas / Vistas en la BD
+  tables:
+    dhcp: "dbo.DHCPRecord"              # Tabla de saturación DHCP
+    uptime: "dbo.PingResults"           # Tabla de pings para uptime
+
+  # Mapeo de columnas SQL → nombres internos del sistema
+  # Ajusta si tus columnas tienen nombres distintos
+  column_map:
+    dhcp:
+      centro: "NombreCentro"           # Nombre del centro educativo
+      fecha: ""                        # Fecha del registro
+      dhcp_pct: "Cantidad"             # % de saturación DHCP
+      provincia: "Province"            # Provincia (opcional)
+    uptime:
+      centro: "CenterName"
+      fecha: "RecordDate"
+      uptime_pct: "UptimePct"
+      provincia: "Province"
